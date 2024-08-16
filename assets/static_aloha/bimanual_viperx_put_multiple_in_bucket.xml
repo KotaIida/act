@@ -5,15 +5,31 @@
         <include file="vx300s_left.xml" />
         <include file="vx300s_right.xml" />
 
-        <body name="cucumber" pos="-.2 .5 .25" quat="1 1 1 1">
-            <joint name="cucumber_joint" type="free" frictionloss="0.01" />
-            <geom condim="4" solimp="0.9 0.95 0.001" solref="0.02 1" friction="2 0.1 0.001" pos="0 0 0"  name="cucumber" type="ellipsoid" size=".015 .1 .015"  rgba=".3 .4 .1 1"/>
+        <body name="cucumber_a" pos="-.15 .5 .25" quat="1 1 1 1">
+            <joint name="cucumber_a_joint" type="free" frictionloss="0.01" />
+            <geom condim="4" solimp="0.9 0.95 0.001" solref="0.02 1" friction="2 0.1 0.001" pos="0 0 0"  name="cucumber_a" type="ellipsoid" size=".015 .1 .015"  rgba=".3 .4 .1 1"/>
             <inertial pos="0 0 0" mass="0.05" diaginertia="0.002 0.002 0.002" />
         </body>   
-  
+
+        <body name="cucumber_b" pos="-.25 .5 .25" quat="1 1 1 1">
+            <joint name="cucumber_b_joint" type="free" frictionloss="0.01" />
+            <geom condim="4" solimp="0.9 0.95 0.001" solref="0.02 1" friction="2 0.1 0.001" pos="0 0 0"  name="cucumber_b" type="ellipsoid" size=".015 .1 .015"  rgba=".3 .4 .1 1"/>
+            <inertial pos="0 0 0" mass="0.05" diaginertia="0.002 0.002 0.002" />
+        </body>   
+
+        <body name="cucumber_c" pos="-.2 .45 .25" quat="1 1 1 1">
+            <joint name="cucumber_c_joint" type="free" frictionloss="0.01" />
+            <geom condim="4" solimp="0.9 0.95 0.001" solref="0.02 1" friction="2 0.1 0.001" pos="0 0 0"  name="cucumber_c" type="ellipsoid" size=".015 .1 .015"  rgba=".3 .4 .1 1"/>
+            <inertial pos="0 0 0" mass="0.05" diaginertia="0.002 0.002 0.002" />
+        </body>   
+
+        <body name="cucumber_d" pos="-.2 .55 .25" quat="1 1 1 1">
+            <joint name="cucumber_d_joint" type="free" frictionloss="0.01" />
+            <geom condim="4" solimp="0.9 0.95 0.001" solref="0.02 1" friction="2 0.1 0.001" pos="0 0 0"  name="cucumber_d" type="ellipsoid" size=".015 .1 .015"  rgba=".3 .4 .1 1"/>
+            <inertial pos="0 0 0" mass="0.05" diaginertia="0.002 0.002 0.002" />
+        </body>   
     </worldbody>
-    <!-- <include file="cucumber.xml"/> -->
-    <include file="bucket.xml"/>
+    <include file="../common/bucket.xml"/>
 
     <actuator>
         <position ctrllimited="true" ctrlrange="-3.14158 3.14158" joint="vx300s_left/waist" kp="800"  user="1" forcelimited="true" forcerange="-150 150"/>
@@ -35,10 +51,7 @@
         <position ctrllimited="true" ctrlrange="-0.057 -0.021" joint="vx300s_right/right_finger" kp="200"  user="1"/>
 
     </actuator>
-
-    <keyframe>
+    <!-- <keyframe>
         <key qpos="0 -0.96 1.16 0 -0.3 0 0.024 -0.024  0 -0.96 1.16 0 -0.3 0 0.024 -0.024  0.2 0.5 0.05 1 0 0 0  -0.2 0.5 0 1 0 0 0"/>
-    </keyframe>
-
-
+    </keyframe> -->
 </mujoco>

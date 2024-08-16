@@ -2,7 +2,6 @@
     <include file="scene_cucumber.xml"/>
     <include file="vx300s_dependencies.xml"/>
 
-
     <equality>
         <weld body1="mocap_left" body2="vx300s_left/gripper_link" solref="0.01 1" solimp=".25 .25 0.001" />
         <weld body1="mocap_right" body2="vx300s_right/gripper_link" solref="0.01 1" solimp=".25 .25 0.001" />
@@ -46,35 +45,8 @@
             <geom condim="4" solimp="0.9 0.95 0.001" solref="0.02 1" friction="2 0.1 0.001" pos="0 0 0"  name="cucumber_d" type="ellipsoid" size=".015 .1 .015"  rgba=".3 .4 .1 1"/>
             <inertial pos="0 0 0" mass="0.05" diaginertia="0.002 0.002 0.002" />
         </body>   
-
-        <!-- <body name="cucumber" pos=".2 .5 .05">
-            <joint name="cucumber_joint" type="free" frictionloss="0.01" />
-            <geom condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1.2 0.06 0.0012" pos="0 0 0" quat="1 1 0 0" name="cucumber" type="capsule" size=".015 .1 .015" rgba=".4 .5 .2 1"/>
-            <inertial pos="0 0 0" mass="0.05" diaginertia="0.002 0.002 0.002" />
-        </body>    -->
-
-
-
-        <!-- <body name="bucket" pos="-.2 .5 .05" quat="0.707 0 0 0.707">
-            <joint name="bucket_joint" type="free" frictionloss="0.01" />
-            <geom condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1 0.005 0.0001"  type="mesh" mesh="bucket2" material="bucket"/>
-            <inertial pos="0 0 0" mass="0.1" diaginertia="0.9 0.9 0.9" />
-        </body>              -->
-        <!-- <body pos="-.2 .5 .05" euler="0 0 0">
-            <joint name="bucket_joint" type="free" frictionloss="0.01" />
-            <inertial pos="0 0 0" mass="0.25" diaginertia="0.9 0.9 0.9" />
-        </body> -->
-
-
-        <!-- <body pos="-0.2 .5 .05" euler="90 0 0">
-            <geom type="sdf" mesh="torus" rgba=".8 .17 .15 1" group="1">
-                <plugin instance="torus"/>
-            </geom>
-        </body> -->
-
     </worldbody>
-    <!-- <include file="cucumber.xml"/> -->
-    <include file="bucket.xml"/>
+    <include file="../common/bucket.xml"/>
     <actuator>
         <position ctrllimited="true" ctrlrange="0.021 0.057" joint="vx300s_left/left_finger" kp="200"  user="1"/>
         <position ctrllimited="true" ctrlrange="-0.057 -0.021" joint="vx300s_left/right_finger" kp="200"  user="1"/>
@@ -82,10 +54,7 @@
         <position ctrllimited="true" ctrlrange="0.021 0.057" joint="vx300s_right/left_finger" kp="200"  user="1"/>
         <position ctrllimited="true" ctrlrange="-0.057 -0.021" joint="vx300s_right/right_finger" kp="200"  user="1"/>
     </actuator>
-
     <!-- <keyframe>
         <key qpos="0 -0.96 1.16 0 -0.3 0 0.024 -0.024  0 -0.96 1.16 0 -0.3 0 0.024 -0.024  0.2 0.5 0.05 1 0 0 0  -0.2 0.5 0 1 0 0 0"/>
     </keyframe> -->
-
-
 </mujoco>

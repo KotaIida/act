@@ -2,7 +2,7 @@ import numpy as np
 import collections
 import os
 
-from constants import DT, XML_DIR, START_ARM_POSE
+from constants import DT, XML_DIR_STATIC, START_ARM_POSE
 from constants import PUPPET_GRIPPER_POSITION_CLOSE
 from constants import PUPPET_GRIPPER_POSITION_UNNORMALIZE_FN
 from constants import PUPPET_GRIPPER_POSITION_NORMALIZE_FN
@@ -36,38 +36,38 @@ def make_ee_sim_env(task_name, **kwargs):
                         "images": {"main": (480x640x3)}        # h, w, c, dtype='uint8'
     """
     if 'sim_transfer_cube_on_static_aloha' == task_name:
-        xml_path = os.path.join(XML_DIR, f'bimanual_viperx_ee_transfer_cube.xml')
+        xml_path = os.path.join(XML_DIR_STATIC, f'bimanual_viperx_ee_transfer_cube.xml')
         physics = mujoco.Physics.from_xml_path(xml_path)
         task = TransferCubeEETask(random=False)
         env = control.Environment(physics, task, time_limit=20, control_timestep=DT,
                                   n_sub_steps=None, flat_observation=False)
     elif 'sim_put_cucumber_in_bucket_on_static_aloha' == task_name:
-        xml_path = os.path.join(XML_DIR, f'bimanual_viperx_ee_put_cucumber_in_bucket.xml')
+        xml_path = os.path.join(XML_DIR_STATIC, f'bimanual_viperx_ee_put_cucumber_in_bucket.xml')
         physics = mujoco.Physics.from_xml_path(xml_path)
         task = PickCucumberAndPutInEETask(random=False)
         env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
                                   n_sub_steps=None, flat_observation=False)
     elif 'sim_put_cube_in_bucket_on_static_aloha' == task_name:
-        xml_path = os.path.join(XML_DIR, f'bimanual_viperx_ee_put_cube_in_bucket.xml')
+        xml_path = os.path.join(XML_DIR_STATIC, f'bimanual_viperx_ee_put_cube_in_bucket.xml')
         physics = mujoco.Physics.from_xml_path(xml_path)
         task = PickCubeAndPutInEETask(random=False)
         env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
                                   n_sub_steps=None, flat_observation=False)
     elif 'sim_put_couple_in_bucket_on_static_aloha' == task_name:
-        xml_path = os.path.join(XML_DIR, f'bimanual_viperx_ee_put_couple_in_bucket.xml')
+        xml_path = os.path.join(XML_DIR_STATIC, f'bimanual_viperx_ee_put_couple_in_bucket.xml')
         physics = mujoco.Physics.from_xml_path(xml_path)
         task = PickCoupleAndPutInEETask(random=False)
         env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
                                   n_sub_steps=None, flat_observation=False)
     elif 'sim_put_multiple_in_bucket_on_static_aloha' == task_name:
-        xml_path = os.path.join(XML_DIR, f'bimanual_viperx_ee_put_multiple_in_bucket.xml')
+        xml_path = os.path.join(XML_DIR_STATIC, f'bimanual_viperx_ee_put_multiple_in_bucket.xml')
         physics = mujoco.Physics.from_xml_path(xml_path)
         pickup_num = kwargs["pickup_num"]
         task = PickMultipleAndPutInEETask(random=False, pickup_num=pickup_num)
         env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
                                   n_sub_steps=None, flat_observation=False)
     elif 'sim_insertion_scripted' == task_name:
-        xml_path = os.path.join(XML_DIR, f'bimanual_viperx_ee_insertion.xml')
+        xml_path = os.path.join(XML_DIR_STATIC, f'bimanual_viperx_ee_insertion.xml')
         physics = mujoco.Physics.from_xml_path(xml_path)
         task = InsertionEETask(random=False)
         env = control.Environment(physics, task, time_limit=20, control_timestep=DT,
