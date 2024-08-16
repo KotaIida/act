@@ -17,7 +17,7 @@
             <geom condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1 0.005 0.0001" pos="0 0 0" size="0.02 0.02 0.015" type="box" name="red_box" rgba="1 0 0 1" />
         </body>
     </worldbody>
-    <include file="../common/bucket.xml"/>
+    <include file="bucket.xml"/>
 
     <actuator>
         <position ctrllimited="true" ctrlrange="-3.14158 3.14158" joint="vx300s_left/waist" kp="800"  user="1" forcelimited="true" forcerange="-150 150"/>

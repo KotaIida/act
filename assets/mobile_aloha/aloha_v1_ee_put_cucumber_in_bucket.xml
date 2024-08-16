@@ -120,12 +120,12 @@
       </body>
     </body>
 
-    <body mocap="true" name="mocap_left" pos="0.303 0.3 0.9132">
+    <body mocap="true" name="mocap_left" pos="0.463 0.303 0.9032">
         <site pos="0 0 0" size="0.003 0.003 0.03" type="box" name="mocap_left_site1" rgba="1 0 0 1"/>
         <site pos="0 0 0" size="0.003 0.03 0.003" type="box" name="mocap_left_site2" rgba="1 0 0 1"/>
         <site pos="0 0 0" size="0.03 0.003 0.003" type="box" name="mocap_left_site3" rgba="1 0 0 1"/>
     </body>
-    <body mocap="true" name="mocap_right" pos="0.304 -0.303 0.9132">
+    <body mocap="true" name="mocap_right" pos="0.464 -0.304 0.9032">
         <site pos="0 0 0" size="0.003 0.003 0.03" type="box" name="mocap_right_site1" rgba="1 0 0 1"/>
         <site pos="0 0 0" size="0.003 0.03 0.003" type="box" name="mocap_right_site2" rgba="1 0 0 1"/>
         <site pos="0 0 0" size="0.03 0.003 0.003" type="box" name="mocap_right_site3" rgba="1 0 0 1"/>

@@ -28,7 +28,7 @@
             <inertial pos="0 0 0" mass="0.05" diaginertia="0.002 0.002 0.002" />
         </body>  
     </worldbody>
-    <include file="../common/bucket.xml"/>
+    <include file="bucket.xml"/>
     <actuator>
         <position ctrllimited="true" ctrlrange="0.021 0.057" joint="vx300s_left/left_finger" kp="200"  user="1"/>
         <position ctrllimited="true" ctrlrange="-0.057 -0.021" joint="vx300s_left/right_finger" kp="200"  user="1"/>
