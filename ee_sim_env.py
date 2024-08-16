@@ -8,7 +8,7 @@ from constants import PUPPET_GRIPPER_POSITION_UNNORMALIZE_FN
 from constants import PUPPET_GRIPPER_POSITION_NORMALIZE_FN
 from constants import PUPPET_GRIPPER_VELOCITY_NORMALIZE_FN
 
-from utils import sample_box_pose, sample_insertion_pose
+from utils import sample_box_pose, sample_obj_and_dst_pose, sample_insertion_pose, sample_obj_box_dst_pose, sample_objs_dst_pose
 from dm_control import mujoco
 from dm_control.rl import control
 from dm_control.suite import base
@@ -17,7 +17,7 @@ import IPython
 e = IPython.embed
 
 
-def make_ee_sim_env(task_name):
+def make_ee_sim_env(task_name, **kwargs):
     """
     Environment for simulated robot bi-manual manipulation, with end-effector control.
     Action space:      [left_arm_pose (7),             # position and quaternion for end effector
@@ -35,13 +35,38 @@ def make_ee_sim_env(task_name):
                                         right_gripper_qvel (1)]     # normalized gripper velocity (pos: opening, neg: closing)
                         "images": {"main": (480x640x3)}        # h, w, c, dtype='uint8'
     """
-    if 'sim_transfer_cube' in task_name:
+    if 'sim_transfer_cube_on_static_aloha' == task_name:
         xml_path = os.path.join(XML_DIR, f'bimanual_viperx_ee_transfer_cube.xml')
         physics = mujoco.Physics.from_xml_path(xml_path)
         task = TransferCubeEETask(random=False)
         env = control.Environment(physics, task, time_limit=20, control_timestep=DT,
                                   n_sub_steps=None, flat_observation=False)
-    elif 'sim_insertion' in task_name:
+    elif 'sim_put_cucumber_in_bucket_on_static_aloha' == task_name:
+        xml_path = os.path.join(XML_DIR, f'bimanual_viperx_ee_put_cucumber_in_bucket.xml')
+        physics = mujoco.Physics.from_xml_path(xml_path)
+        task = PickCucumberAndPutInEETask(random=False)
+        env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
+                                  n_sub_steps=None, flat_observation=False)
+    elif 'sim_put_cube_in_bucket_on_static_aloha' == task_name:
+        xml_path = os.path.join(XML_DIR, f'bimanual_viperx_ee_put_cube_in_bucket.xml')
+        physics = mujoco.Physics.from_xml_path(xml_path)
+        task = PickCubeAndPutInEETask(random=False)
+        env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
+                                  n_sub_steps=None, flat_observation=False)
+    elif 'sim_put_couple_in_bucket_on_static_aloha' == task_name:
+        xml_path = os.path.join(XML_DIR, f'bimanual_viperx_ee_put_couple_in_bucket.xml')
+        physics = mujoco.Physics.from_xml_path(xml_path)
+        task = PickCoupleAndPutInEETask(random=False)
+        env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
+                                  n_sub_steps=None, flat_observation=False)
+    elif 'sim_put_multiple_in_bucket_on_static_aloha' == task_name:
+        xml_path = os.path.join(XML_DIR, f'bimanual_viperx_ee_put_multiple_in_bucket.xml')
+        physics = mujoco.Physics.from_xml_path(xml_path)
+        pickup_num = kwargs["pickup_num"]
+        task = PickMultipleAndPutInEETask(random=False, pickup_num=pickup_num)
+        env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
+                                  n_sub_steps=None, flat_observation=False)
+    elif 'sim_insertion_scripted' == task_name:
         xml_path = os.path.join(XML_DIR, f'bimanual_viperx_ee_insertion.xml')
         physics = mujoco.Physics.from_xml_path(xml_path)
         task = InsertionEETask(random=False)
@@ -131,13 +156,15 @@ class BimanualViperXEETask(base.Task):
     def get_observation(self, physics):
         # note: it is important to do .copy()
         obs = collections.OrderedDict()
-        obs['qpos'] = self.get_qpos(physics)
+        obs['qpos'] = self.get_qpos(physics) # waist, shoulder, elbow, forearm_roll, wrist_angle, wrist_rotate, gripper * left or right = 14
         obs['qvel'] = self.get_qvel(physics)
-        obs['env_state'] = self.get_env_state(physics)
+        obs['env_state'] = self.get_env_state(physics) # xyz and quaternion of red box = 4+3  
         obs['images'] = dict()
         obs['images']['top'] = physics.render(height=480, width=640, camera_id='top')
         obs['images']['angle'] = physics.render(height=480, width=640, camera_id='angle')
         obs['images']['vis'] = physics.render(height=480, width=640, camera_id='front_close')
+        obs['images']['left_wrist'] = physics.render(height=480, width=640, camera_id='left_wrist')
+        obs['images']['right_wrist'] = physics.render(height=480, width=640, camera_id='right_wrist')
         # used in scripted policy to obtain starting pose
         obs['mocap_pose_left'] = np.concatenate([physics.data.mocap_pos[0], physics.data.mocap_quat[0]]).copy()
         obs['mocap_pose_right'] = np.concatenate([physics.data.mocap_pos[1], physics.data.mocap_quat[1]]).copy()
@@ -195,6 +222,122 @@ class TransferCubeEETask(BimanualViperXEETask):
             reward = 3
         if touch_left_gripper and not touch_table: # successful transfer
             reward = 4
+        return reward
+
+
+class PickAndPutInEETask(BimanualViperXEETask):
+    def __init__(self, random=None):
+        super().__init__(random=random)
+        self.max_reward = 1
+        self._bucket_height = 0.11 + 0.002
+        self._bucket_radius = 0.055 + 0.002
+        self.object_name = "_joint"
+
+    def initialize_episode(self, physics):
+        """Sets the state of the environment at the start of each episode."""
+        self.initialize_robots(physics)
+        # randomize box position
+        object_and_bucket_pose = sample_obj_and_dst_pose()
+        box_start_idx = physics.model.name2id(self.object_name, 'joint')
+        np.copyto(physics.data.qpos[box_start_idx : box_start_idx + 7 + 7], object_and_bucket_pose)
+        # print(f"randomized cube position to {cube_position}")
+
+        super().initialize_episode(physics)
+
+    @staticmethod
+    def get_env_state(physics):
+        env_state = physics.data.qpos.copy()[16:]
+        return env_state
+
+    def get_reward(self, physics):
+        # return whether cucumber is in the bucket
+        dist_object_to_bucket_center = np.linalg.norm(physics.named.data.qpos[self.object_name][:2] - physics.named.data.qpos["bucket_joint"][:2])
+        object_center_z = physics.named.data.qpos[self.object_name][2]
+        in_bucket = (dist_object_to_bucket_center < self._bucket_radius) & (object_center_z < self._bucket_height)
+        
+        reward = 0
+        if in_bucket:
+            reward = 1
+        return reward
+
+
+class PickCucumberAndPutInEETask(PickAndPutInEETask):
+    def __init__(self, random=None):
+        super().__init__(random=random)
+        self.object_name = "cucumber_joint"
+
+
+class PickCubeAndPutInEETask(PickAndPutInEETask):
+    def __init__(self, random=None):
+        super().__init__(random=random)
+        self.object_name = "red_box_joint"
+
+
+class PickCoupleAndPutInEETask(PickAndPutInEETask):
+    def __init__(self, random=None):
+        super().__init__(random=random)
+        self.cucumber_box_bucket_pose = None
+        self.obj = None
+
+    def initialize_episode(self, physics):
+        """Sets the state of the environment at the start of each episode."""
+        self.initialize_robots(physics)
+        # randomize box position
+        if self.obj == None:
+            self.cucumber_box_bucket_pose = sample_obj_box_dst_pose()
+            self.obj = "cucumber"
+        elif self.obj == "cucumber":
+            self.obj = "red_box"
+        else:
+             self.cucumber_box_bucket_pose = None
+             self.obj = None
+        box_start_idx = physics.model.name2id(f'cucumber_joint', 'joint')
+        np.copyto(physics.data.qpos[box_start_idx : box_start_idx + 7 + 7 + 7], self.cucumber_box_bucket_pose)
+        # print(f"randomized cube position to {cube_position}")
+
+        super(PickAndPutInEETask, self).initialize_episode(physics)
+
+    def get_reward(self, physics):
+        # return whether cucumbert is in the bucket
+        dist_cucumber_to_bucket_center = np.linalg.norm(physics.named.data.qpos[f"{self.obj}_joint"][:2] - physics.named.data.qpos["bucket_joint"][:2])
+        cucumber_center_z = physics.named.data.qpos[f"{self.obj}_joint"][2]
+        in_bucket = (dist_cucumber_to_bucket_center < self._bucket_radius) & (cucumber_center_z < self._bucket_height)
+        
+        return int(in_bucket)
+
+
+class PickMultipleAndPutInEETask(PickAndPutInEETask):
+    def __init__(self, random=None, pickup_num=3):
+        super().__init__(random=random)
+        self.pickup_num = pickup_num
+        self.cucumber_types = ["a", "b", "c", "d"]
+
+    def initialize_episode(self, physics):
+        """Sets the state of the environment at the start of each episode."""
+        self.initialize_robots(physics)
+        # randomize box position
+        cucumber_and_bucket_pose = sample_objs_dst_pose()
+        box_start_idx = physics.model.name2id('cucumber_a_joint', 'joint')
+        np.copyto(physics.data.qpos[box_start_idx : box_start_idx + 7*5], cucumber_and_bucket_pose)
+        # print(f"randomized cube position to {cube_position}")
+
+        super(PickAndPutInEETask, self).initialize_episode(physics)
+
+    def get_reward(self, physics):
+        # return whether cucumbert is in the bucket
+        reward = 0
+        in_bucket_num = 0
+        for cucumber_type in self.cucumber_types:
+            dist_cucumber_to_bucket_center = np.linalg.norm(physics.named.data.qpos[f"cucumber_{cucumber_type}_joint"][:2] - physics.named.data.qpos["bucket_joint"][:2])
+            cucumber_center_z = physics.named.data.qpos[f"cucumber_{cucumber_type}_joint"][2]
+            in_bucket = (dist_cucumber_to_bucket_center < self._bucket_radius) & (cucumber_center_z < self._bucket_height)
+        
+            if in_bucket:
+                in_bucket_num+=1
+
+        if in_bucket_num == self.pickup_num:
+            reward+=1
+
         return reward
 
 

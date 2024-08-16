@@ -11,7 +11,7 @@ from einops import rearrange
 from constants import DT
 from constants import PUPPET_GRIPPER_JOINT_OPEN
 from utils import load_data # data functions
-from utils import sample_box_pose, sample_insertion_pose # robot functions
+from utils import sample_box_pose, sample_insertion_pose, sample_obj_and_dst_pose, sample_obj_box_dst_pose # robot functions
 from utils import compute_dict_mean, set_seed, detach_dict # helper functions
 from policy import ACTPolicy, CNNMLPPolicy
 from visualize_episodes import save_videos
@@ -25,6 +25,8 @@ def main(args):
     set_seed(1)
     # command line parameters
     is_eval = args['eval']
+    dataset_dir = args['dataset_dir']
+    num_episodes = args['num_episodes']
     ckpt_dir = args['ckpt_dir']
     policy_class = args['policy_class']
     onscreen_render = args['onscreen_render']
@@ -41,8 +43,6 @@ def main(args):
     else:
         from aloha_scripts.constants import TASK_CONFIGS
         task_config = TASK_CONFIGS[task_name]
-    dataset_dir = task_config['dataset_dir']
-    num_episodes = task_config['num_episodes']
     episode_len = task_config['episode_len']
     camera_names = task_config['camera_names']
 
@@ -90,6 +90,7 @@ def main(args):
 
     if is_eval:
         ckpt_names = [f'policy_best.ckpt']
+        config["test_name"] = args["test_name"]
         results = []
         for ckpt_name in ckpt_names:
             success_rate, avg_return = eval_bc(config, ckpt_name, save_episode=True)
@@ -149,7 +150,7 @@ def get_image(ts, camera_names):
 
 
 def eval_bc(config, ckpt_name, save_episode=True):
-    set_seed(1000)
+    set_seed(10)
     ckpt_dir = config['ckpt_dir']
     state_dim = config['state_dim']
     real_robot = config['real_robot']
@@ -161,6 +162,11 @@ def eval_bc(config, ckpt_name, save_episode=True):
     task_name = config['task_name']
     temporal_agg = config['temporal_agg']
     onscreen_cam = 'angle'
+    test_name = config["test_name"]
+
+    output_dir = os.path.join(ckpt_dir, test_name)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
     # load policy and stats
     ckpt_path = os.path.join(ckpt_dir, ckpt_name)
@@ -198,6 +204,7 @@ def eval_bc(config, ckpt_name, save_episode=True):
     num_rollouts = 50
     episode_returns = []
     highest_rewards = []
+    couple_results = []
     for rollout_id in range(num_rollouts):
         rollout_id += 0
         ### set task
@@ -205,6 +212,10 @@ def eval_bc(config, ckpt_name, save_episode=True):
             BOX_POSE[0] = sample_box_pose() # used in sim reset
         elif 'sim_insertion' in task_name:
             BOX_POSE[0] = np.concatenate(sample_insertion_pose()) # used in sim reset
+        elif 'sim_put_cucumber_in' in task_name or 'sim_put_cube_in' in task_name:
+            BOX_POSE[0] = sample_obj_and_dst_pose() # used in sim reset
+        elif 'sim_put_couple_in' in task_name:
+            BOX_POSE[0] = sample_obj_box_dst_pose() # used in sim reset
 
         ts = env.reset()
 
@@ -282,6 +293,15 @@ def eval_bc(config, ckpt_name, save_episode=True):
             move_grippers([env.puppet_bot_left, env.puppet_bot_right], [PUPPET_GRIPPER_JOINT_OPEN] * 2, move_time=0.5)  # open
             pass
 
+        if 'sim_put_couple_in' in task_name:
+            if env.task.cucumber_rewards == 0 and env.task.cube_rewards == 0:
+                couple_results.append(None)
+            else:
+                if env.task.cucumber_rewards > env.task.cube_rewards:
+                    couple_results.append("cucumber")
+                else:
+                    couple_results.append("cube")
+
         rewards = np.array(rewards)
         episode_return = np.sum(rewards[rewards!=None])
         episode_returns.append(episode_return)
@@ -290,11 +310,26 @@ def eval_bc(config, ckpt_name, save_episode=True):
         print(f'Rollout {rollout_id}\n{episode_return=}, {episode_highest_reward=}, {env_max_reward=}, Success: {episode_highest_reward==env_max_reward}')
 
         if save_episode:
-            save_videos(image_list, DT, video_path=os.path.join(ckpt_dir, f'video{rollout_id}.mp4'))
+            save_videos(image_list, DT, video_path=os.path.join(output_dir, f'video{rollout_id}.mp4'))
 
     success_rate = np.mean(np.array(highest_rewards) == env_max_reward)
-    avg_return = np.mean(episode_returns)
-    summary_str = f'\nSuccess rate: {success_rate}\nAverage return: {avg_return}\n\n'
+    avg_return = np.mean(episode_returns)        
+
+    if 'sim_put_couple_in' in task_name:
+        env_task_result = np.array(couple_results) 
+        cucumber_success = env_task_result == "cucumber"
+        cube_success = env_task_result == "cube"  
+        cucumber_success_rate = cucumber_success.sum() / len(cucumber_success)
+        cube_success_rate = cube_success.sum() / len(cube_success)
+
+        summary_str = f'\Total Success rate: {success_rate}\nCucumber Success rate: {cucumber_success_rate}\nCube Success rate: {cube_success_rate}\nAverage return: {avg_return}\n\n'
+        summary_str += "Cucumber : " + repr(np.where(cucumber_success)[0].tolist()) + "\n"
+        summary_str += "Cube : " + repr(np.where(cube_success)[0].tolist()) + "\n\n"
+
+    else:
+        summary_str = f'\nSuccess rate: {success_rate}\nAverage return: {avg_return}\n\n'    
+
+
     for r in range(env_max_reward+1):
         more_or_equal_r = (np.array(highest_rewards) >= r).sum()
         more_or_equal_r_rate = more_or_equal_r / num_rollouts
@@ -304,7 +339,7 @@ def eval_bc(config, ckpt_name, save_episode=True):
 
     # save success rate to txt
     result_file_name = 'result_' + ckpt_name.split('.')[0] + '.txt'
-    with open(os.path.join(ckpt_dir, result_file_name), 'w') as f:
+    with open(os.path.join(output_dir, result_file_name), 'w') as f:
         f.write(summary_str)
         f.write(repr(episode_returns))
         f.write('\n\n')
@@ -417,6 +452,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--eval', action='store_true')
     parser.add_argument('--onscreen_render', action='store_true')
+    parser.add_argument('--dataset_dir', action='store', type=str, help='dataset saving dir', required=True)
+    parser.add_argument('--num_episodes', action='store', type=int, help='num_episodes', required=True)
     parser.add_argument('--ckpt_dir', action='store', type=str, help='ckpt_dir', required=True)
     parser.add_argument('--policy_class', action='store', type=str, help='policy_class, capitalize', required=True)
     parser.add_argument('--task_name', action='store', type=str, help='task_name', required=True)
@@ -426,6 +463,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', action='store', type=float, help='lr', required=True)
 
     # for ACT
+    parser.add_argument('--test_name', action='store', type=str, help='test name', required=False)
     parser.add_argument('--kl_weight', action='store', type=int, help='KL Weight', required=False)
     parser.add_argument('--chunk_size', action='store', type=int, help='chunk_size', required=False)
     parser.add_argument('--hidden_dim', action='store', type=int, help='hidden_dim', required=False)

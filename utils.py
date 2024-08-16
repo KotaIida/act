@@ -141,6 +141,107 @@ def sample_box_pose():
     cube_quat = np.array([1, 0, 0, 0])
     return np.concatenate([cube_position, cube_quat])
 
+def sample_obj_and_dst_pose():
+    obj_x_range = [-0.1, 0.3]
+    dst_x_range = [-0.1, 0.3]
+    y_range = [0.3, 0.8]
+    z_range = [0.015, 0.015]
+    obj_angle_range = [0, 180]
+    obj_dst_interval = 0.1    
+
+    obj_ranges = np.vstack([obj_x_range, y_range, z_range])
+    obj_position = np.random.uniform(obj_ranges[:, 0], obj_ranges[:, 1])
+    obj_angle = np.random.uniform(obj_angle_range[0], obj_angle_range[1])    
+    obj_quat = np.array([np.cos(np.deg2rad(obj_angle)/2), 0, 0, np.sin(np.deg2rad(obj_angle)/2)])    
+    dst_ranges = np.vstack([dst_x_range, y_range, z_range])
+    dst_position = np.random.uniform(dst_ranges[:, 0], dst_ranges[:, 1])
+
+    while np.linalg.norm(dst_position[:2] - obj_position[:2]) < 0.055+0.002+obj_dst_interval:
+        dst_position = np.random.uniform(dst_ranges[:, 0], dst_ranges[:, 1])
+    dst_quat = np.array([1, 0, 0, 0])
+    return np.concatenate([obj_position, obj_quat, dst_position, dst_quat])
+
+
+def sample_obj_box_dst_pose():
+    obj_x_range = [-0.1, 0.3]
+    dst_x_range = [-0.1, 0.3]
+    y_range = [0.3, 0.8]
+    z_range = [0.015, 0.015]
+    obj_angle_range = [0, 180]
+    obj_dst_interval = 0.1    
+
+    obj_ranges = np.vstack([obj_x_range, y_range, z_range])
+    obj_position = np.random.uniform(obj_ranges[:, 0], obj_ranges[:, 1])
+    obj_angle = np.random.uniform(obj_angle_range[0], obj_angle_range[1])    
+    obj_quat = np.array([np.cos(np.deg2rad(obj_angle)/2), 0, 0, np.sin(np.deg2rad(obj_angle)/2)])    
+
+    box_position = np.random.uniform(obj_ranges[:, 0], obj_ranges[:, 1])
+    while np.linalg.norm(box_position[:2] - obj_position[:2]) < 0.055+0.002+obj_dst_interval:
+        box_position = np.random.uniform(obj_ranges[:, 0], obj_ranges[:, 1])
+    box_angle = np.random.uniform(obj_angle_range[0], obj_angle_range[1])
+    box_quat = np.array([np.cos(np.deg2rad(box_angle)/2), 0, 0, np.sin(np.deg2rad(box_angle)/2)]) 
+
+    dst_ranges = np.vstack([dst_x_range, y_range, z_range])
+    dst_position = np.random.uniform(dst_ranges[:, 0], dst_ranges[:, 1])
+    while np.linalg.norm(dst_position[:2] - obj_position[:2]) < 0.055+0.002+obj_dst_interval or np.linalg.norm(dst_position[:2] - box_position[:2]) < 0.055+0.002+obj_dst_interval:
+        dst_position = np.random.uniform(dst_ranges[:, 0], dst_ranges[:, 1])
+    dst_quat = np.array([1, 0, 0, 0])
+
+    return np.concatenate([obj_position, obj_quat, box_position, box_quat, dst_position, dst_quat])
+
+def sample_objs_dst_pose(num_obj = 4):
+    BUCKET_THICK = 0.002
+    BUCKET_RADIUS = 0.055
+    OBJ_DST_INTERVAL = 0.1 + BUCKET_RADIUS + BUCKET_THICK
+    OBJ_OBJ_INTERVAL = 0.1 + 0.015
+
+    obj_x_range = [-0.1, 0.3]
+    dst_x_range = [-0.1, 0.3]
+    y_range = [0.3, 0.8]
+    z_range = [0.015, 0.015]
+    dst_ranges = np.vstack([dst_x_range, y_range, z_range])
+    obj_angle_range = [0, 180]
+    obj_ranges = np.vstack([obj_x_range, y_range, z_range])
+
+    indices = []
+    for i in range(num_obj):
+        for j in range(i):
+            indices.append([i, j])
+    y_indices = np.array(indices)[:, 0]
+    x_indices = np.array(indices)[:, 1]
+
+    dst_position = np.random.uniform(dst_ranges[:, 0], dst_ranges[:, 1])
+    obj_positions = np.random.uniform(obj_ranges[:, 0], obj_ranges[:, 1], (num_obj, 3))
+    obj_obj_dist_table = np.linalg.norm(obj_positions[:, None, :2] - obj_positions[:, :2], axis=2) # (num_obj, num_obj)
+    obj_dst_dist_table = np.linalg.norm(obj_positions[:, :2] - dst_position[:2], axis=1) # (num_obj)
+
+    obj_obj_mask = obj_obj_dist_table < OBJ_OBJ_INTERVAL
+    obj_dst_mask = obj_dst_dist_table < OBJ_DST_INTERVAL
+
+    while np.any(obj_obj_mask[y_indices, x_indices]) or np.any(obj_dst_mask):
+        dst_position = np.random.uniform(dst_ranges[:, 0], dst_ranges[:, 1])
+        obj_positions = np.random.uniform(obj_ranges[:, 0], obj_ranges[:, 1], (num_obj, 3))
+        obj_obj_dist_table = np.linalg.norm(obj_positions[:, None, :2] - obj_positions[:, :2], axis=2) # (num_obj, num_obj)
+        obj_dst_dist_table = np.linalg.norm(obj_positions[:, :2] - dst_position[:2], axis=1) # (num_obj)
+
+        obj_obj_mask = obj_obj_dist_table < OBJ_OBJ_INTERVAL
+        obj_dst_mask = obj_dst_dist_table < OBJ_DST_INTERVAL
+
+    obj_angles = np.random.uniform(obj_angle_range[0], obj_angle_range[1], num_obj)    
+    obj_quats = np.array([np.cos(np.deg2rad(obj_angles)/2), np.zeros(num_obj), np.zeros(num_obj), np.sin(np.deg2rad(obj_angles)/2)]).T
+
+    obj_poses = []
+    for i in range(num_obj):
+        obj_poses.append(obj_positions[i])
+        obj_poses.append(obj_quats[i])
+
+    dst_quat = np.array([1, 0, 0, 0])
+
+    obj_poses.append(dst_position)
+    obj_poses.append(dst_quat)
+
+    return np.concatenate(obj_poses)
+
 def sample_insertion_pose():
     # Peg
     x_range = [0.1, 0.2]

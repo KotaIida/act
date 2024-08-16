@@ -104,6 +104,147 @@ class PickAndTransferPolicy(BasePolicy):
         ]
 
 
+class PickAndPutInPolicy(BasePolicy):
+    def __init__(self, inject_noise=False, careful=False, quick=False):
+        self.inject_noise = inject_noise
+        self.step_count = 0
+        self.left_trajectory = None
+        self.right_trajectory = None
+        self.careful = careful
+        self.quick = quick
+
+    def generate_trajectory(self, ts_first):
+        init_mocap_pose_right = ts_first.observation['mocap_pose_right']
+        init_mocap_pose_left = ts_first.observation['mocap_pose_left']
+
+        obj_and_dst_info = np.array(ts_first.observation['env_state'])
+        obj_xyz = obj_and_dst_info[:3]
+        obj_quat = obj_and_dst_info[3:7]
+        dst_xyz = obj_and_dst_info[7:10]
+
+        gripper_pick_quat = Quaternion(init_mocap_pose_right[3:])
+        gripper_pick_quat_obj = Quaternion(obj_quat) * Quaternion(axis=[0.0, 1.0, 0.0], degrees=-90) * Quaternion(axis=[1.0, 0.0, 0.0], degrees=-90)
+
+        self.left_trajectory = [
+            {"t": 0, "xyz": init_mocap_pose_left[:3], "quat": init_mocap_pose_left[3:], "gripper": 0}, # sleep
+            {"t": 600, "xyz": init_mocap_pose_left[:3], "quat": init_mocap_pose_left[3:], "gripper": 0}, # sleep
+        ]
+
+        self.right_trajectory = [
+            {"t": 0, "xyz": init_mocap_pose_right[:3], "quat": init_mocap_pose_right[3:], "gripper": 0}, # sleep
+            {"t": 90, "xyz": obj_xyz + np.array([0, 0, 0.08]), "quat": gripper_pick_quat_obj.elements, "gripper": 1}, # approach the cucumber
+            {"t": 130, "xyz": obj_xyz + np.array([0, 0, -0.015]), "quat": gripper_pick_quat_obj.elements, "gripper": 1}, # go down
+            {"t": 170, "xyz": obj_xyz + np.array([0, 0, -0.015]), "quat": gripper_pick_quat_obj.elements, "gripper": 0}, # close gripper
+            {"t": 300, "xyz": obj_xyz + np.array([0, 0, 0.3]), "quat": gripper_pick_quat_obj.elements, "gripper": 0}, # go up
+            {"t": 400, "xyz": dst_xyz + np.array([0, 0, 0.3]), "quat": gripper_pick_quat.elements, "gripper": 0}, # move to the bucket
+            {"t": 480, "xyz": dst_xyz + np.array([0, 0, 0.12]), "quat": gripper_pick_quat.elements, "gripper": 0}, # go down
+            {"t": 520, "xyz": dst_xyz + np.array([0, 0, 0.12]), "quat": gripper_pick_quat.elements, "gripper": 1}, # open gripper
+            {"t": 550, "xyz": dst_xyz + np.array([0, 0, 0.3]), "quat": gripper_pick_quat.elements, "gripper": 1}, # go up
+            {"t": 600, "xyz": init_mocap_pose_right[:3], "quat": init_mocap_pose_right[3:], "gripper": 0}, # sleep
+        ]        
+
+        if self.careful:
+            for i, dic in enumerate(self.right_trajectory):
+                self.right_trajectory[i]["t"] *= 2
+            for i, dic in enumerate(self.left_trajectory):
+                self.left_trajectory[i]["t"] *= 2
+        if self.quick:
+            for i, dic in enumerate(self.right_trajectory):
+                self.right_trajectory[i]["t"] //= 2
+            for i, dic in enumerate(self.left_trajectory):
+                self.left_trajectory[i]["t"] //= 2
+
+
+class PickCoupleAndPutInPolicy(BasePolicy):
+    obj = None
+
+    def generate_trajectory(self, ts_first):
+        init_mocap_pose_right = ts_first.observation['mocap_pose_right']
+        init_mocap_pose_left = ts_first.observation['mocap_pose_left']
+
+        objs_and_dst_info = np.array(ts_first.observation['env_state'])
+        if self.obj == "cucumber":
+            obj_xyz = objs_and_dst_info[:3]
+            obj_quat = objs_and_dst_info[3:7]
+        elif self.obj == "red_box":
+            obj_xyz = objs_and_dst_info[7:10]
+            obj_quat = objs_and_dst_info[10:14]
+        dst_xyz = objs_and_dst_info[14:17]
+        dst_quat = objs_and_dst_info[17:]
+        # print(f"Generate trajectory for {box_xyz=}")
+
+        gripper_pick_quat = Quaternion(init_mocap_pose_right[3:])
+        gripper_pick_quat_obj = Quaternion(obj_quat) * Quaternion(axis=[0.0, 1.0, 0.0], degrees=-90) * Quaternion(axis=[1.0, 0.0, 0.0], degrees=-90)
+
+        self.left_trajectory = [
+            {"t": 0, "xyz": init_mocap_pose_left[:3], "quat": init_mocap_pose_left[3:], "gripper": 0}, # sleep
+            {"t": 600, "xyz": init_mocap_pose_left[:3], "quat": init_mocap_pose_left[3:], "gripper": 0}, # sleep
+        ]
+
+        self.right_trajectory = [
+            {"t": 0, "xyz": init_mocap_pose_right[:3], "quat": init_mocap_pose_right[3:], "gripper": 0}, # sleep
+            {"t": 90, "xyz": obj_xyz + np.array([0, 0, 0.08]), "quat": gripper_pick_quat_obj.elements, "gripper": 1}, # approach the cube
+            {"t": 130, "xyz": obj_xyz + np.array([0, 0, -0.015]), "quat": gripper_pick_quat_obj.elements, "gripper": 1}, # go down
+            {"t": 170, "xyz": obj_xyz + np.array([0, 0, -0.015]), "quat": gripper_pick_quat_obj.elements, "gripper": 0}, # close gripper
+            {"t": 300, "xyz": obj_xyz + np.array([0, 0, 0.3]), "quat": gripper_pick_quat_obj.elements, "gripper": 0}, # go up
+            # {"t": 360, "xyz": obj_xyz + np.array([0, 0, 0.3]), "quat": gripper_pick_quat.elements, "gripper": 0}, # turn gripper
+            {"t": 500, "xyz": dst_xyz + np.array([0, 0, 0.3]), "quat": gripper_pick_quat.elements, "gripper": 0}, # move to destination
+            {"t": 540, "xyz": dst_xyz + np.array([0, 0, 0.12]), "quat": gripper_pick_quat.elements, "gripper": 0}, # go down
+            {"t": 580, "xyz": dst_xyz + np.array([0, 0, 0.12]), "quat": gripper_pick_quat.elements, "gripper": 1}, # open gripper
+            {"t": 600, "xyz": dst_xyz + np.array([0, 0, 0.3]), "quat": gripper_pick_quat.elements, "gripper": 1}, # go up
+        ]        
+
+
+class PickMultipleAndPutInPolicy(BasePolicy):
+    def __init__(self, pick_up_num = 3, obj_num = 4, inject_noise=False):
+        self.inject_noise = inject_noise
+        self.step_count = 0
+        self.left_trajectory = None
+        self.right_trajectory = None
+        self.pick_up_num = pick_up_num
+        self.obj_num = obj_num
+        self.num_step = 600
+
+    def generate_trajectory(self, ts_first):
+        init_mocap_pose_right = ts_first.observation['mocap_pose_right']
+        init_mocap_pose_left = ts_first.observation['mocap_pose_left']
+
+        objs_and_dst_info = np.array(ts_first.observation['env_state'])
+
+
+        dst_xyz = objs_and_dst_info[7*self.obj_num:7*self.obj_num+3]
+        dst_quat = objs_and_dst_info[7*self.obj_num+3:]
+
+        self.left_trajectory = [
+                {"t": 0, "xyz": init_mocap_pose_left[:3], "quat": init_mocap_pose_left[3:], "gripper": 0}, # sleep
+                {"t": self.num_step*self.pick_up_num, "xyz": init_mocap_pose_left[:3], "quat": init_mocap_pose_left[3:], "gripper": 0}, # sleep
+            ]
+        self.right_trajectory = [
+            {"t": 0, "xyz": init_mocap_pose_right[:3], "quat": init_mocap_pose_right[3:], "gripper": 0}, # sleep
+        ]
+
+        for i in range(self.pick_up_num):
+            xyz_start = i*7
+            obj_xyz = objs_and_dst_info[xyz_start:xyz_start+3]
+            obj_quat = objs_and_dst_info[xyz_start+3:xyz_start+3+4]
+
+            gripper_pick_quat = Quaternion(init_mocap_pose_right[3:])
+            gripper_pick_quat_obj = Quaternion(obj_quat) * Quaternion(axis=[0.0, 1.0, 0.0], degrees=-90) * Quaternion(axis=[1.0, 0.0, 0.0], degrees=-90)
+
+            right_trajectory_tmp =[
+                {"t": i*self.num_step+90, "xyz": obj_xyz + np.array([0, 0, 0.08]), "quat": gripper_pick_quat_obj.elements, "gripper": 1}, # approach the cube
+                {"t": i*self.num_step+130, "xyz": obj_xyz + np.array([0, 0, -0.015]), "quat": gripper_pick_quat_obj.elements, "gripper": 1}, # go down
+                {"t": i*self.num_step+170, "xyz": obj_xyz + np.array([0, 0, -0.015]), "quat": gripper_pick_quat_obj.elements, "gripper": 0}, # close gripper
+                {"t": i*self.num_step+300, "xyz": obj_xyz + np.array([0, 0, 0.3]), "quat": gripper_pick_quat_obj.elements, "gripper": 0}, # go up
+                {"t": i*self.num_step+500, "xyz": dst_xyz + np.array([0, 0, 0.3]), "quat": gripper_pick_quat.elements, "gripper": 0}, # move to destination
+                {"t": i*self.num_step+540, "xyz": dst_xyz + np.array([0, 0, 0.12]), "quat": gripper_pick_quat.elements, "gripper": 0}, # go down
+                {"t": i*self.num_step+580, "xyz": dst_xyz + np.array([0, 0, 0.12]), "quat": gripper_pick_quat.elements, "gripper": 1}, # open gripper
+                {"t": i*self.num_step+600, "xyz": dst_xyz + np.array([0, 0, 0.3]), "quat": gripper_pick_quat.elements, "gripper": 1}, # go up
+            ]
+
+            self.right_trajectory += right_trajectory_tmp
+
+
 class InsertionPolicy(BasePolicy):
 
     def generate_trajectory(self, ts_first):
