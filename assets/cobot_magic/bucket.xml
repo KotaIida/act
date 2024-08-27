@@ -1,6 +1,6 @@
 <mujocoinclude>
   <worldbody>
-    <body pos="-.2 1 0.98" euler="0 0 0">
+    <body pos="0.65 -0.3 0.85" euler="0 0 0">
       <joint name="bucket_joint" type="free" frictionloss="0.01" />
       <inertial pos="0 0 0" mass="0.1" diaginertia="0.9 0.9 0.9" />
       <geom type="cylinder" size="0.053 0.002" rgba="0.6 0.6 0.9 1" pos="0 0 0.0"/>

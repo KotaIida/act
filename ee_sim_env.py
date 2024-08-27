@@ -2,10 +2,10 @@ import numpy as np
 import collections
 import os
 
-from constants import DT, XML_DIR_STATIC, START_ARM_POSE
-from constants import PUPPET_GRIPPER_POSITION_CLOSE
-from constants import PUPPET_GRIPPER_POSITION_UNNORMALIZE_FN
-from constants import PUPPET_GRIPPER_POSITION_NORMALIZE_FN
+from constants import DT, XML_DIR_STATIC, XML_DIR_MOBILE, START_ARM_POSE, START_ARM_POSE_MOBILE
+from constants import PUPPET_GRIPPER_POSITION_CLOSE, PUPPET_GRIPPER_POSITION_CLOSE_MOBILE
+from constants import PUPPET_GRIPPER_POSITION_UNNORMALIZE_FN, PUPPET_GRIPPER_POSITION_UNNORMALIZE_FN_MOBILE
+from constants import PUPPET_GRIPPER_POSITION_NORMALIZE_FN, PUPPET_GRIPPER_POSITION_NORMALIZE_FN_MOBILE
 from constants import PUPPET_GRIPPER_VELOCITY_NORMALIZE_FN
 
 from utils import sample_box_pose, sample_obj_and_dst_pose, sample_insertion_pose, sample_obj_box_dst_pose, sample_objs_dst_pose
@@ -71,6 +71,18 @@ def make_ee_sim_env(task_name, **kwargs):
         physics = mujoco.Physics.from_xml_path(xml_path)
         task = InsertionEETask(random=False)
         env = control.Environment(physics, task, time_limit=20, control_timestep=DT,
+                                  n_sub_steps=None, flat_observation=False)
+    elif 'sim_put_cucumber_in_bucket_on_mobile_aloha' == task_name:
+        xml_path = os.path.join(XML_DIR_MOBILE, f'bimanual_viperx_ee_put_cucumber_in_bucket.xml')
+        physics = mujoco.Physics.from_xml_path(xml_path)
+        task = PickCucumberAndPutInEETaskMobile(random=False)
+        env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
+                                  n_sub_steps=None, flat_observation=False)
+    elif 'sim_put_couple_in_bucket_on_mobile_aloha' == task_name:
+        xml_path = os.path.join(XML_DIR_MOBILE, f'bimanual_viperx_ee_put_couple_in_bucket.xml')
+        physics = mujoco.Physics.from_xml_path(xml_path)
+        task = PickCoupleAndPutInEETaskMobile(random=False)
+        env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
                                   n_sub_steps=None, flat_observation=False)
     else:
         raise NotImplementedError
@@ -408,3 +420,179 @@ class InsertionEETask(BimanualViperXEETask):
         if pin_touched: # successful insertion
             reward = 4
         return reward
+
+
+class BimanualViperXEETaskMobile(base.Task):
+    def __init__(self, random=None):
+        super().__init__(random=random)
+
+    def before_step(self, action, physics):
+        a_len = len(action) // 2
+        action_left = action[:a_len]
+        action_right = action[a_len:]
+
+        # set mocap position and quat
+        # left
+        np.copyto(physics.data.mocap_pos[0], action_left[:3])
+        np.copyto(physics.data.mocap_quat[0], action_left[3:7])
+        # right
+        np.copyto(physics.data.mocap_pos[1], action_right[:3])
+        np.copyto(physics.data.mocap_quat[1], action_right[3:7])
+
+        # set gripper
+        g_left_ctrl = PUPPET_GRIPPER_POSITION_UNNORMALIZE_FN_MOBILE(action_left[7])
+        g_right_ctrl = PUPPET_GRIPPER_POSITION_UNNORMALIZE_FN_MOBILE(action_right[7])
+        np.copyto(physics.data.ctrl, np.array([g_left_ctrl, g_right_ctrl]))
+
+    def initialize_robots(self, physics):
+        # reset joint position
+        physics.named.data.qpos[:16] = START_ARM_POSE_MOBILE
+
+        # reset mocap to align with end effector
+        # to obtain these numbers:
+        # (1) make an ee_sim env and reset to the same start_pose
+        # (2) get env._physics.named.data.xpos['vx300s_left/gripper_link']
+        #     get env._physics.named.data.xquat['vx300s_left/gripper_link']
+        #     repeat the same for right side
+        np.copyto(physics.data.mocap_pos[0], [-0.305, 0.56581119, 1.33725084])
+        np.copyto(physics.data.mocap_quat[0], [1, 0, 0, 0])
+        # right
+        np.copyto(physics.data.mocap_pos[1], np.array([0.305, 0.56581119, 1.33725084]))
+        np.copyto(physics.data.mocap_quat[1],  [1, 0, 0, 0])
+
+        # reset gripper control
+        close_gripper_control = np.array([
+            PUPPET_GRIPPER_POSITION_CLOSE_MOBILE,
+            PUPPET_GRIPPER_POSITION_CLOSE_MOBILE,
+        ])
+        np.copyto(physics.data.ctrl, close_gripper_control)
+
+    def initialize_episode(self, physics):
+        """Sets the state of the environment at the start of each episode."""
+        super().initialize_episode(physics)
+
+    @staticmethod
+    def get_qpos(physics):
+        qpos_raw = physics.data.qpos.copy()
+        left_qpos_raw = qpos_raw[:8]
+        right_qpos_raw = qpos_raw[8:16]
+        left_arm_qpos = left_qpos_raw[:6]
+        right_arm_qpos = right_qpos_raw[:6]
+        left_gripper_qpos = [PUPPET_GRIPPER_POSITION_NORMALIZE_FN_MOBILE(left_qpos_raw[6])]
+        right_gripper_qpos = [PUPPET_GRIPPER_POSITION_NORMALIZE_FN_MOBILE(right_qpos_raw[6])]
+        return np.concatenate([left_arm_qpos, left_gripper_qpos, right_arm_qpos, right_gripper_qpos])
+
+    @staticmethod
+    def get_qvel(physics):
+        qvel_raw = physics.data.qvel.copy()
+        left_qvel_raw = qvel_raw[:8]
+        right_qvel_raw = qvel_raw[8:16]
+        left_arm_qvel = left_qvel_raw[:6]
+        right_arm_qvel = right_qvel_raw[:6]
+        left_gripper_qvel = [PUPPET_GRIPPER_VELOCITY_NORMALIZE_FN(left_qvel_raw[6])]
+        right_gripper_qvel = [PUPPET_GRIPPER_VELOCITY_NORMALIZE_FN(right_qvel_raw[6])]
+        return np.concatenate([left_arm_qvel, left_gripper_qvel, right_arm_qvel, right_gripper_qvel])
+
+    @staticmethod
+    def get_env_state(physics):
+        raise NotImplementedError
+
+    def get_observation(self, physics):
+        # note: it is important to do .copy()
+        obs = collections.OrderedDict()
+        obs['qpos'] = self.get_qpos(physics) # waist, shoulder, elbow, forearm_roll, wrist_angle, wrist_rotate, gripper * left or right = 14
+        obs['qvel'] = self.get_qvel(physics)
+        obs['env_state'] = self.get_env_state(physics) # xyz and quaternion of red box = 4+3  
+        obs['images'] = dict()
+        obs['images']['top'] = physics.render(height=480, width=640, camera_id='overhead_cam')
+        obs['images']['angle'] = physics.render(height=480, width=640, camera_id='front_cam')
+        obs['images']['vis'] = physics.render(height=480, width=640, camera_id='side')
+        obs['images']['left_wrist'] = physics.render(height=480, width=640, camera_id='wrist_cam_left')
+        obs['images']['right_wrist'] = physics.render(height=480, width=640, camera_id='wrist_cam_right')
+        # used in scripted policy to obtain starting pose
+        obs['mocap_pose_left'] = np.concatenate([physics.data.mocap_pos[0], physics.data.mocap_quat[0]]).copy()
+        obs['mocap_pose_right'] = np.concatenate([physics.data.mocap_pos[1], physics.data.mocap_quat[1]]).copy()
+
+        # used when replaying joint trajectory
+        obs['gripper_ctrl'] = physics.data.ctrl.copy()
+        return obs
+
+    def get_reward(self, physics):
+        raise NotImplementedError
+    
+
+
+class PickAndPutInEETaskMobile(BimanualViperXEETaskMobile):
+    def __init__(self, random=None):
+        super().__init__(random=random)
+        self.max_reward = 1
+        self._table_z = 0.96
+        self._bucket_height = 0.11 + 0.002
+        self._bucket_radius = 0.055 + 0.002
+        self.object_name = "_joint"
+
+    def initialize_episode(self, physics):
+        """Sets the state of the environment at the start of each episode."""
+        self.initialize_robots(physics)
+        # randomize box position
+        object_and_bucket_pose = sample_obj_and_dst_pose(mobile=True)
+        box_start_idx = physics.model.name2id(self.object_name, 'joint')
+        np.copyto(physics.data.qpos[box_start_idx : box_start_idx + 7 + 7], object_and_bucket_pose)
+        # print(f"randomized cube position to {cube_position}")
+
+        super().initialize_episode(physics)
+
+    @staticmethod
+    def get_env_state(physics):
+        env_state = physics.data.qpos.copy()[16:]
+        return env_state
+
+    def get_reward(self, physics):
+        # return whether cucumber is in the bucket
+        dist_object_to_bucket_center = np.linalg.norm(physics.named.data.qpos[self.object_name][:2] - physics.named.data.qpos["bucket_joint"][:2])
+        object_center_z = physics.named.data.qpos[self.object_name][2]
+        in_bucket = (dist_object_to_bucket_center < self._bucket_radius) & (self._table_z < object_center_z < self._table_z+self._bucket_height)
+        
+        reward = 0
+        if in_bucket:
+            reward = 1
+        return reward
+
+
+class PickCucumberAndPutInEETaskMobile(PickAndPutInEETaskMobile):
+    def __init__(self, random=None):
+        super().__init__(random=random)
+        self.object_name = "cucumber_joint"
+
+
+class PickCoupleAndPutInEETaskMobile(PickAndPutInEETaskMobile):
+    def __init__(self, random=None):
+        super().__init__(random=random)
+        self.cucumber_box_bucket_pose = None
+        self.obj = None
+
+    def initialize_episode(self, physics):
+        """Sets the state of the environment at the start of each episode."""
+        self.initialize_robots(physics)
+        # randomize box position
+        if self.obj == None:
+            self.cucumber_box_bucket_pose = sample_obj_box_dst_pose(mobile=True)
+            self.obj = "cucumber"
+        elif self.obj == "cucumber":
+            self.obj = "red_box"
+        else:
+             self.cucumber_box_bucket_pose = None
+             self.obj = None
+        box_start_idx = physics.model.name2id(f'cucumber_joint', 'joint')
+        np.copyto(physics.data.qpos[box_start_idx : box_start_idx + 7 + 7 + 7], self.cucumber_box_bucket_pose)
+        # print(f"randomized cube position to {cube_position}")
+
+        super(PickAndPutInEETaskMobile, self).initialize_episode(physics)
+
+    def get_reward(self, physics):
+        # return whether cucumbert is in the bucket
+        dist_cucumber_to_bucket_center = np.linalg.norm(physics.named.data.qpos[f"{self.obj}_joint"][:2] - physics.named.data.qpos["bucket_joint"][:2])
+        object_center_z = physics.named.data.qpos[f"{self.obj}_joint"][2]
+        in_bucket = (dist_cucumber_to_bucket_center < self._bucket_radius) & (self._table_z < object_center_z < self._table_z+self._bucket_height)
+        
+        return int(in_bucket)

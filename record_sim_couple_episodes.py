@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 import h5py
 import tqdm
 
-from constants import PUPPET_GRIPPER_POSITION_NORMALIZE_FN, CAM_NAMES_STATIC
+from constants import PUPPET_GRIPPER_POSITION_NORMALIZE_FN, PUPPET_GRIPPER_POSITION_NORMALIZE_FN_MOBILE, CAM_NAMES_STATIC, CAM_NAMES_MOBILE
 from ee_sim_env import make_ee_sim_env
 from sim_env import make_sim_env, BOX_POSE
-from scripted_policy import PickCoupleAndPutInPolicy
+from scripted_policy import PickCoupleAndPutInPolicy, PickCoupleAndPutInPolicyMobile
 
 import IPython
 e = IPython.embed
@@ -29,18 +29,28 @@ def main(args):
     num_episodes = args['num_episodes']
     onscreen_render = args['onscreen_render']
     episode_len = args['episode_len']
-    camera_names = CAM_NAMES_STATIC
+    camera_names = CAM_NAMES_MOBILE if "mobile" in task_name else CAM_NAMES_STATIC
     inject_noise = False
-    render_cam_name = 'angle'
+    if "static" in task_name:
+        render_cam_name = 'angle'
+        normalize_fn = PUPPET_GRIPPER_POSITION_NORMALIZE_FN
+        right_gripper_idx = 2
+    else:
+        render_cam_name = 'vis'
+        normalize_fn = PUPPET_GRIPPER_POSITION_NORMALIZE_FN_MOBILE
+        right_gripper_idx = 1        
 
     if not os.path.isdir(dataset_dir):
         os.makedirs(dataset_dir, exist_ok=True)
 
     if task_name == 'sim_put_couple_in_bucket_on_static_aloha':
         policy_cls = PickCoupleAndPutInPolicy
+    elif task_name == "sim_put_couple_in_bucket_on_mobile_aloha":
+        policy_cls = PickCoupleAndPutInPolicyMobile
     else:
         raise NotImplementedError
 
+    success = []
     episode_idx = 0
     with tqdm.tqdm(range(num_episodes)) as pbar:
         while episode_idx < num_episodes:
@@ -93,14 +103,14 @@ def main(args):
             # gripperの開閉状態を観測値で制御してしまうと、力が弱すぎてつかめないため置換
             cucumber_gripper_ctrl_traj = [cucumber_ts.observation['gripper_ctrl'] for cucumber_ts in cucumber_episode]
             for joint, ctrl in zip(cucumber_joint_traj, cucumber_gripper_ctrl_traj):
-                left_ctrl = PUPPET_GRIPPER_POSITION_NORMALIZE_FN(ctrl[0])
-                right_ctrl = PUPPET_GRIPPER_POSITION_NORMALIZE_FN(ctrl[2])
+                left_ctrl = normalize_fn(ctrl[0])
+                right_ctrl = normalize_fn(ctrl[right_gripper_idx])
                 joint[6] = left_ctrl
                 joint[6+7] = right_ctrl
             cube_gripper_ctrl_traj = [cube_ts.observation['gripper_ctrl'] for cube_ts in cube_episode]
             for joint, ctrl in zip(cube_joint_traj, cube_gripper_ctrl_traj):
-                left_ctrl = PUPPET_GRIPPER_POSITION_NORMALIZE_FN(ctrl[0])
-                right_ctrl = PUPPET_GRIPPER_POSITION_NORMALIZE_FN(ctrl[2])
+                left_ctrl = normalize_fn(ctrl[0])
+                right_ctrl = normalize_fn(ctrl[right_gripper_idx])
                 joint[6] = left_ctrl
                 joint[6+7] = right_ctrl
 
@@ -135,7 +145,12 @@ def main(args):
 
 
             episode_return = np.sum([cucumber_ts.reward for cucumber_ts in cucumber_episode_replay[-10:]])
-            if episode_return < 10:
+            if episode_return == 10:
+                success.append(1)
+                print(f"Cucumber {episode_idx=} Successful, {episode_return=}")
+            else:
+                success.append(0)
+                print(f"Cucumber {episode_idx=} Failed, {episode_return=}")
                 continue
 
             plt.close()
@@ -160,7 +175,12 @@ def main(args):
 
 
             episode_return = np.sum([cube_ts.reward for cube_ts in cube_episode_replay[-10:]])
-            if episode_return < 10:
+            if episode_return == 10:
+                success.append(1)
+                print(f"Cube {episode_idx=} Successful, {episode_return=}")
+            else:
+                success.append(0)
+                print(f"Cube {episode_idx=} Failed, {episode_return=}")
                 continue
 
             plt.close()

@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 import h5py
 import tqdm
 
-from constants import PUPPET_GRIPPER_POSITION_NORMALIZE_FN, CAM_NAMES_STATIC
+from constants import PUPPET_GRIPPER_POSITION_NORMALIZE_FN, PUPPET_GRIPPER_POSITION_NORMALIZE_FN_MOBILE, CAM_NAMES_STATIC, CAM_NAMES_MOBILE
 from ee_sim_env import make_ee_sim_env
 from sim_env import make_sim_env, BOX_POSE
-from scripted_policy import PickAndTransferPolicy, PickAndPutInPolicy, InsertionPolicy, PickMultipleAndPutInPolicy
+from scripted_policy import PickAndTransferPolicy, PickAndPutInPolicy, InsertionPolicy, PickMultipleAndPutInPolicy, PickAndPutInPolicyMobile
 
 import IPython
 e = IPython.embed
@@ -31,9 +31,12 @@ def main(args):
     quick = args['quick']
     pickup_num = args['pickup_num']
     episode_len = args['episode_len']
-    camera_names = CAM_NAMES_STATIC
+    camera_names = CAM_NAMES_MOBILE if "mobile" in task_name else CAM_NAMES_STATIC
     inject_noise = False
-    render_cam_name = 'angle'
+    if "static" in task_name:
+        render_cam_name = 'angle'
+    else:
+        render_cam_name = 'vis'
 
     if not os.path.isdir(dataset_dir):
         os.makedirs(dataset_dir, exist_ok=True)
@@ -46,15 +49,16 @@ def main(args):
 
     if task_name == 'sim_transfer_cube_on_static_aloha':
         policy_cls = PickAndTransferPolicy
-    elif task_name == 'sim_put_cucumber_in_bucket_on_static_aloha' or task_name == 'sim_put_cube_in_bucket_on_static_aloha':
-        policy_cls = PickAndPutInPolicy
     elif task_name == 'sim_put_multiple_in_bucket_on_static_aloha':
         policy_cls = PickMultipleAndPutInPolicy
         episode_len *= pickup_num
     elif task_name == 'sim_insertion_scripted':
         policy_cls = InsertionPolicy
     else:
-        raise NotImplementedError
+        if "static" in task_name:   
+            policy_cls = PickAndPutInPolicy
+        elif "mobile" in task_name:
+            policy_cls = PickAndPutInPolicyMobile
 
     success = []
     episode_idx = 0
@@ -67,12 +71,12 @@ def main(args):
             episode = [ts]
             if task_name == 'sim_transfer_cube_on_static_aloha':
                 policy = policy_cls(inject_noise)
-            elif task_name == 'sim_put_cucumber_in_bucket_on_static_aloha' or task_name == 'sim_put_cube_in_bucket_on_static_aloha':
-                policy = policy_cls(inject_noise, careful, quick)
             elif task_name == 'sim_put_multiple_in_bucket_on_static_aloha':
                 policy = policy_cls(pickup_num)
             elif task_name == 'sim_insertion_scripted':
                 policy = policy_cls(inject_noise)
+            else:
+                policy = policy_cls(inject_noise, careful, quick)
             # setup plotting
             if onscreen_render:
                 ax = plt.subplot()
@@ -93,8 +97,13 @@ def main(args):
             # gripperの開閉状態を観測値で制御してしまうと、力が弱すぎてつかめないため置換
             gripper_ctrl_traj = [ts.observation['gripper_ctrl'] for ts in episode]
             for joint, ctrl in zip(joint_traj, gripper_ctrl_traj):
-                left_ctrl = PUPPET_GRIPPER_POSITION_NORMALIZE_FN(ctrl[0])
-                right_ctrl = PUPPET_GRIPPER_POSITION_NORMALIZE_FN(ctrl[2])
+                if "static" in task_name:   
+                    left_ctrl = PUPPET_GRIPPER_POSITION_NORMALIZE_FN(ctrl[0])
+                    right_ctrl = PUPPET_GRIPPER_POSITION_NORMALIZE_FN(ctrl[2])
+                elif "mobile" in task_name:
+                    left_ctrl = PUPPET_GRIPPER_POSITION_NORMALIZE_FN_MOBILE(ctrl[0])
+                    right_ctrl = PUPPET_GRIPPER_POSITION_NORMALIZE_FN_MOBILE(ctrl[1])
+
                 joint[6] = left_ctrl
                 joint[6+7] = right_ctrl
 
@@ -126,16 +135,7 @@ def main(args):
                     plt.pause(0.02)
 
 
-            if task_name == "sim_put_cucumber_in_bucket_scripted" or task_name == "sim_put_cube_in_bucket_scripted" or task_name == "sim_put_multiple_cucumbers_in_bucket_scripted":
-                episode_return = np.sum([ts.reward for ts in episode_replay[-10:]])
-                if episode_return == 10:
-                    success.append(1)
-                    # print(f"{episode_idx=} Successful, {episode_return=}")
-                else:
-                    success.append(0)
-                    continue
-                    # print(f"{episode_idx=} Failed, {episode_return=}")
-            else:
+            if task_name == "sim_transfer_cube_on_static_aloha":
                 episode_return = np.sum([ts.reward for ts in episode_replay[1:]])
                 episode_max_reward = np.max([ts.reward for ts in episode_replay[1:]])
                 if episode_max_reward == env.task.max_reward:
@@ -145,6 +145,16 @@ def main(args):
                     success.append(0)
                     continue
                     # print(f"{episode_idx=} Failed")
+            else:
+                episode_return = np.sum([ts.reward for ts in episode_replay[-10:]])
+                if episode_return == 10:
+                    success.append(1)
+                    print(f"{episode_idx=} Successful, {episode_return=}")
+                else:
+                    success.append(0)
+                    print(f"{episode_idx=} Failed, {episode_return=}")
+                    continue
+
 
 
             plt.close()
@@ -207,6 +217,13 @@ def main(args):
             pbar.update()
 
     print(f'Saved to {dataset_dir}')
+    success_indices = np.where(success)[0].tolist()
+    success_rate = sum(success)/len(success)
+    with open(os.path.join(dataset_dir, "record_result.txt"), "w") as f:
+        f.write(f"Trial Num: {len(success)}\n")
+        f.write(repr(success_indices))
+        f.write("\n")
+        f.write(f"Success Rate: {success_rate}")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

@@ -22,7 +22,7 @@ defusedxml==0.7.1
 # Editable Git install with no remote (detr==0.0.0)
 -e /home/sbr-tech/work/act-main/detr
 distro==1.9.0
-dm-control==1.0.9
+dm-control==1.0.22
 dm-env==1.6
 dm-tree==0.1.8
 docutils==0.21.2
@@ -72,7 +72,7 @@ matplotlib==3.9.0
 matplotlib-inline==0.1.7
 mistune==3.0.2
 mpmath==1.3.0
-mujoco==2.3.3
+mujoco==3.2.2
 nbclient==0.10.0
 nbconvert==7.16.4
 nbformat==5.10.4
@@ -150,3 +150,4 @@ webencodings==0.5.1
 websocket-client==1.8.0
 widgetsnbextension==4.0.11
 zipp==3.19.2
+tensorflow==2.15.0

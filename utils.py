@@ -141,13 +141,21 @@ def sample_box_pose():
     cube_quat = np.array([1, 0, 0, 0])
     return np.concatenate([cube_position, cube_quat])
 
-def sample_obj_and_dst_pose():
-    obj_x_range = [-0.1, 0.3]
-    dst_x_range = [-0.1, 0.3]
-    y_range = [0.3, 0.8]
-    z_range = [0.015, 0.015]
-    obj_angle_range = [0, 180]
-    obj_dst_interval = 0.1    
+def sample_obj_and_dst_pose(mobile=False):
+    if not mobile:
+        obj_x_range = [-0.1, 0.3]
+        dst_x_range = [-0.1, 0.3]
+        y_range = [0.3, 0.8]
+        z_range = [0.015, 0.015]
+        obj_angle_range = [0, 180]
+        obj_dst_interval = 0.1    
+    else:
+        obj_x_range = [-0.03, 0.57]
+        dst_x_range = [-0.03, 0.57]
+        y_range = [0.75, 0.95]
+        z_range = [0.98, 0.98]
+        obj_angle_range = [-90, 90]
+        obj_dst_interval = 0.1            
 
     obj_ranges = np.vstack([obj_x_range, y_range, z_range])
     obj_position = np.random.uniform(obj_ranges[:, 0], obj_ranges[:, 1])
@@ -162,13 +170,21 @@ def sample_obj_and_dst_pose():
     return np.concatenate([obj_position, obj_quat, dst_position, dst_quat])
 
 
-def sample_obj_box_dst_pose():
-    obj_x_range = [-0.1, 0.3]
-    dst_x_range = [-0.1, 0.3]
-    y_range = [0.3, 0.8]
-    z_range = [0.015, 0.015]
-    obj_angle_range = [0, 180]
-    obj_dst_interval = 0.1    
+def sample_obj_box_dst_pose(mobile=False):
+    if not mobile:
+        obj_x_range = [-0.1, 0.3]
+        dst_x_range = [-0.1, 0.3]
+        y_range = [0.3, 0.8]
+        z_range = [0.015, 0.015]
+        obj_angle_range = [0, 180]
+        obj_dst_interval = 0.1    
+    else:
+        obj_x_range = [-0.03, 0.57]
+        dst_x_range = [-0.03, 0.57]
+        y_range = [0.75, 0.95]
+        z_range = [0.98, 0.98]
+        obj_angle_range = [-90, 90]
+        obj_dst_interval = 0.1    
 
     obj_ranges = np.vstack([obj_x_range, y_range, z_range])
     obj_position = np.random.uniform(obj_ranges[:, 0], obj_ranges[:, 1])
