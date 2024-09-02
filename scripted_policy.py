@@ -1,12 +1,36 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from pyquaternion import Quaternion
+from scipy.spatial.transform import Rotation as R
 
 from constants import SIM_TASK_CONFIGS
 from ee_sim_env import make_ee_sim_env
 
 import IPython
 e = IPython.embed
+
+# BASE_X = 0.295
+# BASE_Y = 0.414
+# MAX_ANGLE = 90
+# MIN_ANGLE = 45.12239478312595
+
+# MAX_DIST = 0.6684396383490685
+# MIN_DIST = 0.45241159357381644
+
+# def quaternion_to_euler(q):
+#     r = R.from_quat([q[1], q[2], q[3], q[0]])
+#     return r.as_euler('xyz', degrees=True)
+
+
+# def interpolate_wrist_angle(object_dist):    
+#     a = (MIN_ANGLE - MAX_ANGLE)/(MAX_DIST - MIN_DIST)
+#     b = MAX_ANGLE - a*MIN_DIST
+
+#     return a*object_dist + b
+
+# def calc_base_to_obj(obj_x, obj_y):
+#     dist = np.linalg.norm(np.array([obj_x, obj_y]) - np.array([BASE_X, BASE_Y]))
+#     return dist
 
 
 class BasePolicy:
@@ -170,11 +194,19 @@ class PickAndPutInPolicyMobile(BasePolicy):
 
         obj_and_dst_info = np.array(ts_first.observation['env_state'])
         obj_xyz = obj_and_dst_info[:3]
+        # obj_xy = obj_xyz[:2]
         obj_quat = obj_and_dst_info[3:7]
         dst_xyz = obj_and_dst_info[7:10]
 
+        # obj_angle = quaternion_to_euler(obj_quat)[2]
+        # base_to_obj_vec = obj_xy - np.array([BASE_X, BASE_Y])
+        # base_angle = -np.rad2deg(np.arctan2(*base_to_obj_vec))
+        # base_to_obj = calc_base_to_obj(obj_xy[0], obj_xy[1])
+        # wrist_angle = interpolate_wrist_angle(base_to_obj)
+
         gripper_pick_quat = Quaternion(init_mocap_pose_right[3:])
-        gripper_pick_quat_obj = Quaternion(obj_quat) * Quaternion(axis=[0.0, 1.0, 0.0], degrees=-90) * Quaternion(axis=[1.0, 0.0, 0.0], degrees=-90) * Quaternion(axis=[0.0, 0.0, 1.0], degrees=90)
+        # gripper_pick_quat_obj = Quaternion(axis=[1.0, 0.0, 0.0], degrees=-wrist_angle) * Quaternion(axis=[0.0, -1.0, 0.0], degrees=obj_angle - base_angle)
+        gripper_pick_quat_obj = Quaternion(obj_quat) * Quaternion(axis=[1.0, 0.0, 0.0], degrees=-90)
         gripper_pick_quat_obj2 = gripper_pick_quat * Quaternion(axis=[1.0, 0.0, 0.0], degrees=15)
         
 
@@ -185,13 +217,13 @@ class PickAndPutInPolicyMobile(BasePolicy):
 
         self.right_trajectory = [
             {"t": 0, "xyz": init_mocap_pose_right[:3], "quat": init_mocap_pose_right[3:], "gripper": 0}, # sleep
-            {"t": 150, "xyz": obj_xyz + np.array([0, 0, 0.08]), "quat": gripper_pick_quat_obj.elements, "gripper": 1}, # approach the cucumber
-            {"t": 190, "xyz": obj_xyz + np.array([0, 0, -0.015]), "quat": gripper_pick_quat_obj.elements, "gripper": 1}, # go down
-            {"t": 230, "xyz": obj_xyz + np.array([0, 0, -0.015]), "quat": gripper_pick_quat_obj.elements, "gripper": 0}, # close gripper
-            {"t": 360, "xyz": obj_xyz + np.array([0, 0, 0.3]), "quat": gripper_pick_quat_obj2.elements, "gripper": 0}, # go up
-            {"t": 460, "xyz": dst_xyz + np.array([0, 0, 0.3]), "quat": gripper_pick_quat_obj2.elements, "gripper": 0}, # move to the bucket
-            {"t": 540, "xyz": dst_xyz + np.array([0, 0, 0.16]), "quat": gripper_pick_quat_obj2.elements, "gripper": 0}, # go down
-            {"t": 580, "xyz": dst_xyz + np.array([0, 0, 0.16]), "quat": gripper_pick_quat_obj2.elements, "gripper": 1}, # open gripper
+            {"t": 150, "xyz": obj_xyz + np.array([0, 0, 0.2]), "quat": gripper_pick_quat_obj.elements, "gripper": 1}, # approach the cucumber
+            {"t": 190, "xyz": obj_xyz + np.array([0, 0, -0.01]), "quat": gripper_pick_quat_obj.elements, "gripper": 1}, # go down
+            {"t": 230, "xyz": obj_xyz + np.array([0, 0, -0.01]), "quat": gripper_pick_quat_obj.elements, "gripper": 0}, # close gripper
+            {"t": 360, "xyz": obj_xyz + np.array([0, 0, 0.4]), "quat": gripper_pick_quat_obj2.elements, "gripper": 0}, # go up
+            {"t": 460, "xyz": dst_xyz + np.array([0, 0, 0.4]), "quat": gripper_pick_quat_obj2.elements, "gripper": 0}, # move to the bucket
+            {"t": 540, "xyz": dst_xyz + np.array([0, 0, 0.21]), "quat": gripper_pick_quat_obj2.elements, "gripper": 0}, # go down
+            {"t": 580, "xyz": dst_xyz + np.array([0, 0, 0.21]), "quat": gripper_pick_quat_obj2.elements, "gripper": 1}, # open gripper
             {"t": 670, "xyz": init_mocap_pose_right[:3], "quat": gripper_pick_quat.elements, "gripper": 0}, # retutrn
             {"t": 720, "xyz": init_mocap_pose_right[:3], "quat": gripper_pick_quat.elements, "gripper": 0}, # sleep
         ]        

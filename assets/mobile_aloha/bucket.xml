@@ -1,9 +1,9 @@
 <mujocoinclude>
   <worldbody>
-    <body pos="-.2 1 0.98" euler="0 0 0">
+    <body pos="-.2 0.9845 0.827" euler="0 0 0">
       <joint name="bucket_joint" type="free" frictionloss="0.01" />
       <inertial pos="0 0 0" mass="0.1" diaginertia="0.9 0.9 0.9" />
-      <geom type="cylinder" size="0.053 0.002" rgba="0.6 0.6 0.9 1" pos="0 0 0.0"/>
+      <geom type="cylinder" size="0.053 0.002" rgba="0.6 0.6 0.9 1" pos="0 0 0.002"/>
       <geom type="box" condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1 0.005 0.0001"  pos="0.055000 0.000000 0.055000" size="0.002 0.002 0.055" rgba="0.6 0.6 0.9 1" euler="0 0 0.000000" />
       <geom type="box" condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1 0.005 0.0001"  pos="0.054988 0.001152 0.055000" size="0.002 0.002 0.055" rgba="0.6 0.6 0.9 1" euler="0 0 1.200000" />
       <geom type="box" condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1 0.005 0.0001"  pos="0.054952 0.002303 0.055000" size="0.002 0.002 0.055" rgba="0.6 0.6 0.9 1" euler="0 0 2.400000" />

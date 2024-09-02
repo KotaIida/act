@@ -146,29 +146,72 @@ def sample_obj_and_dst_pose(mobile=False):
         obj_x_range = [-0.1, 0.3]
         dst_x_range = [-0.1, 0.3]
         y_range = [0.3, 0.8]
-        z_range = [0.015, 0.015]
+        obj_z_range = [0.015, 0.015]
+        dst_z_range = [0.015, 0.015]
         obj_angle_range = [0, 180]
         obj_dst_interval = 0.1    
-    else:
-        obj_x_range = [-0.03, 0.57]
-        dst_x_range = [-0.03, 0.57]
-        y_range = [0.75, 0.95]
-        z_range = [0.98, 0.98]
-        obj_angle_range = [-90, 90]
-        obj_dst_interval = 0.1            
-
-    obj_ranges = np.vstack([obj_x_range, y_range, z_range])
-    obj_position = np.random.uniform(obj_ranges[:, 0], obj_ranges[:, 1])
-    obj_angle = np.random.uniform(obj_angle_range[0], obj_angle_range[1])    
-    obj_quat = np.array([np.cos(np.deg2rad(obj_angle)/2), 0, 0, np.sin(np.deg2rad(obj_angle)/2)])    
-    dst_ranges = np.vstack([dst_x_range, y_range, z_range])
-    dst_position = np.random.uniform(dst_ranges[:, 0], dst_ranges[:, 1])
-
-    while np.linalg.norm(dst_position[:2] - obj_position[:2]) < 0.055+0.002+obj_dst_interval:
+        obj_ranges = np.vstack([obj_x_range, y_range, obj_z_range])
+        obj_position = np.random.uniform(obj_ranges[:, 0], obj_ranges[:, 1])
+        obj_angle = np.random.uniform(obj_angle_range[0], obj_angle_range[1])    
+        obj_quat = np.array([np.cos(np.deg2rad(obj_angle)/2), 0, 0, np.sin(np.deg2rad(obj_angle)/2)])    
+        dst_ranges = np.vstack([dst_x_range, y_range, dst_z_range])
         dst_position = np.random.uniform(dst_ranges[:, 0], dst_ranges[:, 1])
+
+        while np.linalg.norm(dst_position[:2] - obj_position[:2]) < 0.055+0.002+obj_dst_interval:
+            dst_position = np.random.uniform(dst_ranges[:, 0], dst_ranges[:, 1])
+    
+    else:
+        circle_x = 0.295
+        circle_y = 0.414
+        obj_circle_r = 0.564095655480825
+        dst_circle_r = 0.7767498780487515
+
+        rect_center_x = -0.0235
+        rect_center_y = 0.9845
+        rect_offset = 0.05
+        rect_w = 0.272*2 - rect_offset*2
+        rect_h = 0.1785*2 - rect_offset*2
+
+        obj_z = 0.842
+        dst_z = 0.827
+        obj_angle_range = [-90, 90] # -90, 90
+        obj_dst_interval = 0.1            
+        obj_xy = hit_or_miss_sample(obj_circle_r, circle_x, circle_y, rect_center_x, rect_center_y, rect_w, rect_h)
+        dst_xy = hit_or_miss_sample(dst_circle_r, circle_x, circle_y, rect_center_x, rect_center_y, rect_w, rect_h)
+
+        obj_angle = np.random.uniform(obj_angle_range[0], obj_angle_range[1])    
+        obj_quat = np.array([np.cos(np.deg2rad(obj_angle)/2), 0, 0, np.sin(np.deg2rad(obj_angle)/2)])    
+
+        while np.linalg.norm(dst_xy - obj_xy) < 0.055+0.002+obj_dst_interval:
+            dst_xy = hit_or_miss_sample(dst_circle_r, circle_x, circle_y, rect_center_x, rect_center_y, rect_w, rect_h)
+        
+        obj_position = np.hstack([obj_xy, obj_z])
+        dst_position = np.hstack([dst_xy, dst_z])
+
     dst_quat = np.array([1, 0, 0, 0])
     return np.concatenate([obj_position, obj_quat, dst_position, dst_quat])
 
+def hit_or_miss_sample(circle_r, circle_x, circle_y, rect_center_x, rect_center_y, rect_w, rect_h):
+    rect_min_x = rect_center_x-rect_w/2
+    rect_max_x = rect_center_x+rect_w/2
+    rect_min_y = rect_center_y-rect_h/2
+    rect_max_y = rect_center_y+rect_h/2
+    
+    min_x = min(circle_x-circle_r, rect_min_x)
+    max_x = max(circle_x+circle_r, rect_max_x)    
+    min_y = min(circle_y-circle_r, rect_min_y)
+    max_y = max(circle_y+circle_r, rect_max_y)        
+
+    in_rect, in_circle = False, False
+
+    while not (in_rect and in_circle):    
+        sample = np.random.uniform(low=[min_x, min_y], high=[max_x, max_y])
+        sample_x, sample_y = sample
+        
+        in_rect = (rect_min_x < sample_x) & (sample_x < rect_max_x) & (rect_min_y < sample_y) & (sample_y < rect_max_y)
+        in_circle = np.linalg.norm(sample - np.stack([circle_x, circle_y])) < circle_r
+
+    return sample
 
 def sample_obj_box_dst_pose(mobile=False):
     if not mobile:

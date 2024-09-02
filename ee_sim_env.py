@@ -454,10 +454,10 @@ class BimanualViperXEETaskMobile(base.Task):
         # (2) get env._physics.named.data.xpos['vx300s_left/gripper_link']
         #     get env._physics.named.data.xquat['vx300s_left/gripper_link']
         #     repeat the same for right side
-        np.copyto(physics.data.mocap_pos[0], [-0.305, 0.56581119, 1.33725084])
+        np.copyto(physics.data.mocap_pos[0], [-0.295, 0.70581119, 1.33725084])
         np.copyto(physics.data.mocap_quat[0], [1, 0, 0, 0])
         # right
-        np.copyto(physics.data.mocap_pos[1], np.array([0.305, 0.56581119, 1.33725084]))
+        np.copyto(physics.data.mocap_pos[1], np.array([0.295, 0.70581119, 1.33725084]))
         np.copyto(physics.data.mocap_quat[1],  [1, 0, 0, 0])
 
         # reset gripper control
@@ -504,7 +504,7 @@ class BimanualViperXEETaskMobile(base.Task):
         obs['qvel'] = self.get_qvel(physics)
         obs['env_state'] = self.get_env_state(physics) # xyz and quaternion of red box = 4+3  
         obs['images'] = dict()
-        obs['images']['top'] = physics.render(height=480, width=640, camera_id='overhead_cam')
+        obs['images']['top'] = physics.render(height=480, width=640, camera_id='top')
         obs['images']['angle'] = physics.render(height=480, width=640, camera_id='front_cam')
         obs['images']['vis'] = physics.render(height=480, width=640, camera_id='side')
         obs['images']['left_wrist'] = physics.render(height=480, width=640, camera_id='wrist_cam_left')
@@ -526,8 +526,8 @@ class PickAndPutInEETaskMobile(BimanualViperXEETaskMobile):
     def __init__(self, random=None):
         super().__init__(random=random)
         self.max_reward = 1
-        self._table_z = 0.96
-        self._bucket_height = 0.11 + 0.002
+        self._table_z = 0.827
+        self._bucket_height = 0.11
         self._bucket_radius = 0.055 + 0.002
         self.object_name = "_joint"
 

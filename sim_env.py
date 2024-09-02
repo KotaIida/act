@@ -456,7 +456,7 @@ class BimanualViperXTaskMobile(base.Task):
         obs['qvel'] = self.get_qvel(physics)
         obs['env_state'] = self.get_env_state(physics)
         obs['images'] = dict()
-        obs['images']['top'] = physics.render(height=480, width=640, camera_id='overhead_cam')
+        obs['images']['top'] = physics.render(height=480, width=640, camera_id='top')
         obs['images']['angle'] = physics.render(height=480, width=640, camera_id='front_cam')
         obs['images']['vis'] = physics.render(height=480, width=640, camera_id='side')
         obs['images']['left_wrist'] = physics.render(height=480, width=640, camera_id='wrist_cam_left')
@@ -473,8 +473,8 @@ class PickAndPutInTaskMobile(BimanualViperXTaskMobile):
     def __init__(self, random=None):
         super().__init__(random=random)
         self.max_reward = 1
-        self._table_z = 0.96
-        self._bucket_height = 0.11 + 0.002
+        self._table_z = 0.827
+        self._bucket_height = 0.11
         self._bucket_radius = 0.055 + 0.002
         self.object_name = "_joint"
 

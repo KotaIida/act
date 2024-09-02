@@ -139,3 +139,4 @@ dmypy.json
 # Pyre type checker
 .pyre/
 .venv/
+datas_*

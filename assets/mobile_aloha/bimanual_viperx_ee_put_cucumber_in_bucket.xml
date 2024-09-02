@@ -14,18 +14,19 @@
 
   <asset>
     <!-- Table dimensions (length x width x height in meters): 1.21x0.76x0.75 -->
-    <mesh file="tablelegs.obj" scale="1.55 1.0 1.27"/>
-    <mesh file="tabletop.obj" scale="1.75 1.1 1.0"/>
-
-    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
-    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3"
-      markrgb="0.8 0.8 0.8" width="300" height="300"/>
-    <texture type="2d" file="small_meta_table_diffuse.png"/>
+    <mesh file="tablelegs.obj" scale="1.55 0.6 0.99"/>
+    <mesh file="tabletop.obj" scale="1.6 0.4925 1.0"/>
+    <texture type="2d" file="tabletop_homography.png"/>
+    <texture type="2d" file="tabletop_homography_rotate.png"/>
     <texture type="2d" file="floor.png"/>
-    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
-    <material name="table" texture="small_meta_table_diffuse"/>
-    <material name="floor" texture="floor" texuniform="true" texrepeat="4 3" reflectance="0.2"/>
-    <material name="metal" rgba="0.517 0.529 0.537 1"/>
+    <texture type="2d" file="cardboard_homography.png"/>
+    <texture type="2d" file="cardboard_side.png"/>
+
+    <material name="tabletop_near" texture="tabletop_homography_rotate"/>
+    <material name="tabletop_far" texture="tabletop_homography"/>
+    <material name="cardboard" texture="cardboard_homography"/>
+    <material name="cardboard_side" texture="cardboard_side"  texuniform="true" texrepeat="3.7 10"/>
+    <material name="floor" texture="floor" texuniform="true" texrepeat="0.25 3"/>
   </asset>
 
   <default>
@@ -40,22 +41,34 @@
   </equality>  
 
   <worldbody>
-    <geom name="floor" size="4 4 0.05" type="plane" material="floor" pos="0 0 0" euler="0 0 1.56"/>
+    <geom name="floor" size="4 4 0.05" type="plane" material="floor" pos="0 0 0"/>
     <geom name="wall_right" pos="4 0 2" size="0.1 4 2" type="box" rgba="0.773 0.8 0.765 1"/>
     <geom name="wall_left" pos="-4 0 2" size="0.1 4 2" type="box" rgba="0.773 0.8 0.765 1"/>
     <geom name="wall_front" pos="0 4 2" size="4 0.1 2" type="box" rgba="0.773 0.8 0.765 1"/>
     <site name="worldref" pos="0 0 0"/>
-    <geom mesh="tabletop" material="table" class="visual" pos="0 1.0 0.2" quat="1 0 0 1"/>
-    <geom mesh="tablelegs" material="table" class="visual" pos="0 1.0 0" rgba="0.2 0.2 0.2 1"/>
-    <geom name="table" pos="0 1.0 0.8491" size="0.671 0.667 0.1" type="box" class="collision"/>
-    <light mode="fixed" pos="0 1.0 5.5" cutoff="55"  dir="0 0 -1"/>
+    <geom mesh="tablelegs" class="visual" pos="0 0.806 0" rgba="0.2 0.2 0.2 1"/>
+    <geom name="tabletop_near" pos="0 0.506 0.724" size="0.609 0.3 0.012" type="box" material="tabletop_near"/>
+    <geom name="tabletop_far" pos="0 1.106 0.724" size="0.609 0.3 0.012" type="box" material="tabletop_far"/>
+
+    <geom name="cardboard" type="box" size="0.272 0.1785 0.0455" pos="-0.0235 0.9845 0.7815" material="cardboard"/>      
+    <geom name="cardbaord_front" type="box" size="0.272 0.0455 0.0001" pos="-0.0235 0.806 0.7815" material="cardboard_side" euler="-1.5708 0 0"/>
+    <geom name="cardbaord_back" type="box" size="0.272 0.0455 0.0001" pos="-0.0235 1.163 0.7815" material="cardboard_side" euler="-1.5708 0 0"/>
+    <geom name="cardbaord_left_side" type="box" size="0.1785 0.0455 0.0001" pos="-0.2955 0.9845 0.7815" material="cardboard_side" euler="-1.5708 -1.5708 0"/>
+    <geom name="cardbaord_right_side" type="box" size="0.1785 0.0455 0.0001" pos="0.2485 0.9845 0.7815" material="cardboard_side" euler="-1.5708 -1.5708 0"/>
+
+    <light castshadow="false" directional='true' diffuse='.3 .3 .3' specular='0.3 0.3 0.3' pos='-1 -1 1'
+            dir='1 1 -1'/>
+    <light directional='true' diffuse='.3 .3 .3' specular='0.3 0.3 0.3' pos='1 -1 1' dir='-1 1 -1'/>
+    <light castshadow="false" directional='true' diffuse='.3 .3 .3' specular='0.3 0.3 0.3' pos='0 1 1'
+            dir='0 -1 -1'/>
 
     <camera name="overhead_cam" fovy="78" pos="0 0.2 2.2" mode="fixed" quat="0.976332 0.216277 0 0"/>
     <camera name="worms_eye_cam" fovy="78" pos="0 -0.377167 1.0316055" mode="fixed" quat="0.672659 0.739953 0 0"/>
     <camera name="side" pos="-1.724 0.904 1.682" xyaxes="0.003 -1.000 0.000 0.393 0.001 0.919"/>
-
-    <body mocap="true" name="mocap_left" pos="-0.305 0.978 1.467">
-    <!-- <body mocap="true" name="mocap_left" pos="-0.305 0.56581119 1.33725084"> -->
+    <camera name="back" pos="-0.120 1.949 0.963" xyaxes="-1.000 -0.029 0.000 0.001 -0.044 0.999"/>
+    
+    <body mocap="true" name="mocap_left" pos="-0.295 0.99 1.454">
+    <!-- <body mocap="true" name="mocap_left" pos="-0.295 0.70581119 1.33725084"> -->
         <site pos="0 0 0.015" size="0.003 0.003 0.015" type="box" name="mocap_left_site1" rgba="1 0 0 1"/>
         <site pos="0 0 0" size="0.003 0.03 0.003" type="box" name="mocap_left_site2" rgba="1 0 0 1"/>
         <site pos="0 0 0" size="0.03 0.003 0.003" type="box" name="mocap_left_site3" rgba="1 0 0 1"/>
@@ -64,7 +77,7 @@
         <site pos="-0.015 0.015 0" size="0.0212132 0.003 0.003" type="box" rgba="1 0 0 1" euler="0 0 0.785398"/>
         <site pos="0 0.015 0.015" size="0.0212132 0.003 0.003" type="box" rgba="1 0 0 1" euler="-1.570796 1.570796  -0.785398"/>
     </body>
-    <body mocap="true" name="mocap_right" pos="0.305 0.978 1.467">
+    <body mocap="true" name="mocap_right" pos="0.295 0.99 1.454">
     <!-- <body mocap="true" name="mocap_right" pos="0.305 0.56581119 1.33725084"> -->
         <site pos="0 0 0.015" size="0.003 0.003 0.015" type="box" name="mocap_right_site1" rgba="1 0 0 1"/>
         <site pos="0 0 0" size="0.003 0.03 0.003" type="box" name="mocap_right_site2" rgba="1 0 0 1"/>
@@ -75,11 +88,12 @@
         <site pos="0 0.015 0.015" size="0.0212132 0.003 0.003" type="box" rgba="1 0 0 1" euler="-1.570796 1.570796  -0.785398"/>
     </body>
 
-    <body name="cucumber" pos=".2 1 0.98" quat="0.7071067811865476 0.0 0.0 0.7071067811865475">
+    <body name="cucumber" pos=".2 0.9845 0.842" quat="0.7071067811865476 0.0 0.0 0.7071067811865475">
         <joint name="cucumber_joint" type="free" frictionloss="0.01" />
         <geom condim="4" solimp="0.9 0.95 0.001" solref="0.02 1" friction="2 0.1 0.001" pos="0 0 0"  name="cucumber" type="ellipsoid" size=".015 .1 .015"  rgba=".3 .4 .1 1"/>
         <inertial pos="0 0 0" mass="0.05" diaginertia="0.002 0.002 0.002" />
-    </body>  
+    </body>
+    <camera name="top" pos="0.000 0.70 2.500" xyaxes="1.000 0.000 0.000 0.000 1.000 0.000"/>
 
   </worldbody>
   <include file="bucket.xml"/>

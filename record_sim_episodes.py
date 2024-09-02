@@ -25,7 +25,9 @@ def main(args):
 
     task_name = args['task_name']
     dataset_dir = args['dataset_dir']
+    start_idx = args['start_idx']
     num_episodes = args['num_episodes']
+    end_idx = start_idx + num_episodes
     onscreen_render = args['onscreen_render']
     careful = args['careful']
     quick = args['quick']
@@ -61,9 +63,9 @@ def main(args):
             policy_cls = PickAndPutInPolicyMobile
 
     success = []
-    episode_idx = 0
+    episode_idx = start_idx
     with tqdm.tqdm(range(num_episodes)) as pbar:
-        while episode_idx < num_episodes:
+        while episode_idx < end_idx:
             # setup the environment
             env = make_ee_sim_env(task_name, pickup_num=pickup_num)
             
@@ -219,7 +221,7 @@ def main(args):
     print(f'Saved to {dataset_dir}')
     success_indices = np.where(success)[0].tolist()
     success_rate = sum(success)/len(success)
-    with open(os.path.join(dataset_dir, "record_result.txt"), "w") as f:
+    with open(os.path.join(dataset_dir, f"record_result_{start_idx}_to_{end_idx}.txt"), "w") as f:
         f.write(f"Trial Num: {len(success)}\n")
         f.write(repr(success_indices))
         f.write("\n")
@@ -230,6 +232,7 @@ if __name__ == '__main__':
     parser.add_argument('--task_name', action='store', type=str, help='task_name', required=True)
     parser.add_argument('--dataset_dir', action='store', type=str, help='dataset saving dir', required=True)
     parser.add_argument('--num_episodes', action='store', type=int, help='num_episodes', required=False)
+    parser.add_argument('--start_idx', action='store', default=0, type=int, help='num_episodes', required=False)
     parser.add_argument('--onscreen_render', action='store_true')
     parser.add_argument('--episode_len', action='store', type=int, default=600, help='length of one episode', required=False)
     parser.add_argument('--careful', action='store_true')
