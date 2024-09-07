@@ -1,0 +1,24 @@
+<mujocoinclude>
+  <compiler meshdir="assets" texturedir="assets"/>
+
+  <asset>
+    <texture type="2d" file="franka_dual_base_homography.png"/>
+    <material name="franka_dual_base" texture="franka_dual_base_homography"/>
+  </asset>
+  <worldbody>
+    <body name="franka_dual_base" pos="0 0.175 0.411">
+      <geom name="base" size="0.58 0.39 0.411" type="box" material="franka_dual_base"/>
+      <geom name="back" pos="0 -0.39 0" size="0.58 0.001 0.411" type="box" rgba="0.40392157 0.59607843 0.81568627 1"/>
+      <geom name="left" pos="-0.58 0 0" size="0.001 0.39 0.411" type="box" rgba="0.8 0.8 0.8 1"/>
+      <geom name="right" pos="0.58 0 0" size="0.001 0.39 0.411" type="box" rgba="0.8 0.8 0.8 1"/>
+      <geom name="front" pos="0 0.39 0" size="0.58 0.001 0.411" type="box" rgba="0.8 0.8 0.8 1"/>
+    </body>
+
+    <geom type="box" pos="0 0.0822 1.272" size="0.02 0.02 0.45" conaffinity="1" contype="1" rgba="0.4 0.4 0.4 1" />
+    <body name="front_cam" pos="0 0.086 1.658" euler="-2.0943951023931953 0 0">
+      <geom pos="0 -0.0824748 -0.0095955" quat="0 0 -0.21644 -0.976296"  type="mesh" mesh="d405_solid" group="2" material="black" contype="0" conaffinity="0"/>
+      <geom class="collision" pos="0 -0.0824748 -0.0095955" quat="0 0 -0.21644 -0.976296"  type="mesh" mesh="d405_solid" />
+      <camera name="front_cam" pos="0 -0.0824748 -0.0095955" mode="fixed" euler="2.775955359 0 0" fovy="40"/>
+    </body>    
+  </worldbody>
+</mujocoinclude>

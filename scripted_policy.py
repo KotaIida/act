@@ -17,9 +17,9 @@ e = IPython.embed
 # MAX_DIST = 0.6684396383490685
 # MIN_DIST = 0.45241159357381644
 
-# def quaternion_to_euler(q):
-#     r = R.from_quat([q[1], q[2], q[3], q[0]])
-#     return r.as_euler('xyz', degrees=True)
+def quaternion_to_euler(q):
+    r = R.from_quat([q[1], q[2], q[3], q[0]])
+    return r.as_euler('xyz', degrees=True)
 
 
 # def interpolate_wrist_angle(object_dist):    
@@ -209,7 +209,68 @@ class PickAndPutInPolicyMobile(BasePolicy):
         gripper_pick_quat_obj = Quaternion(obj_quat) * Quaternion(axis=[1.0, 0.0, 0.0], degrees=-90)
         gripper_pick_quat_obj2 = gripper_pick_quat * Quaternion(axis=[1.0, 0.0, 0.0], degrees=15)
         
+        
+        self.left_trajectory = [
+            {"t": 0, "xyz": init_mocap_pose_left[:3], "quat": init_mocap_pose_left[3:], "gripper": 0}, # sleep
+            {"t": 720, "xyz": init_mocap_pose_left[:3], "quat": init_mocap_pose_left[3:], "gripper": 0}, # sleep
+        ]
 
+        self.right_trajectory = [
+            {"t": 0, "xyz": init_mocap_pose_right[:3], "quat": init_mocap_pose_right[3:], "gripper": 0}, # sleep
+            {"t": 150, "xyz": obj_xyz + np.array([0, 0, 0.2]), "quat": gripper_pick_quat_obj.elements, "gripper": 1}, # approach the cucumber
+            {"t": 190, "xyz": obj_xyz + np.array([0, 0, -0.01]), "quat": gripper_pick_quat_obj.elements, "gripper": 1}, # go down
+            {"t": 230, "xyz": obj_xyz + np.array([0, 0, -0.01]), "quat": gripper_pick_quat_obj.elements, "gripper": 0}, # close gripper
+            {"t": 360, "xyz": obj_xyz + np.array([0, 0, 0.4]), "quat": gripper_pick_quat_obj2.elements, "gripper": 0}, # go up
+            {"t": 460, "xyz": dst_xyz + np.array([0, 0, 0.4]), "quat": gripper_pick_quat_obj2.elements, "gripper": 0}, # move to the bucket
+            {"t": 540, "xyz": dst_xyz + np.array([0, 0, 0.21]), "quat": gripper_pick_quat_obj2.elements, "gripper": 0}, # go down
+            {"t": 580, "xyz": dst_xyz + np.array([0, 0, 0.21]), "quat": gripper_pick_quat_obj2.elements, "gripper": 1}, # open gripper
+            {"t": 670, "xyz": init_mocap_pose_right[:3], "quat": gripper_pick_quat.elements, "gripper": 0}, # retutrn
+            {"t": 720, "xyz": init_mocap_pose_right[:3], "quat": gripper_pick_quat.elements, "gripper": 0}, # sleep
+        ]        
+
+        if self.careful:
+            for i, dic in enumerate(self.right_trajectory):
+                self.right_trajectory[i]["t"] *= 2
+            for i, dic in enumerate(self.left_trajectory):
+                self.left_trajectory[i]["t"] *= 2
+        if self.quick:
+            for i, dic in enumerate(self.right_trajectory):
+                self.right_trajectory[i]["t"] //= 2
+            for i, dic in enumerate(self.left_trajectory):
+                self.left_trajectory[i]["t"] //= 2
+
+
+class PickAndPutInPolicyFranka(BasePolicy):
+    def __init__(self, inject_noise=False, careful=False, quick=False):
+        self.inject_noise = inject_noise
+        self.step_count = 0
+        self.left_trajectory = None
+        self.right_trajectory = None
+        self.careful = careful
+        self.quick = quick
+
+    def generate_trajectory(self, ts_first):
+        init_mocap_pose_right = ts_first.observation['mocap_pose_right']
+        init_mocap_pose_left = ts_first.observation['mocap_pose_left']
+
+        obj_and_dst_info = np.array(ts_first.observation['env_state'])
+        obj_xyz = obj_and_dst_info[:3]
+        # obj_xy = obj_xyz[:2]
+        obj_quat = obj_and_dst_info[3:7]
+        dst_xyz = obj_and_dst_info[7:10]
+
+        obj_angle = quaternion_to_euler(obj_quat)[2]
+        obj_quat = Quaternion(axis=[0, 0, 1], degrees=(obj_angle + 180)%180)
+        # base_to_obj_vec = obj_xy - np.array([BASE_X, BASE_Y])
+        # base_angle = -np.rad2deg(np.arctan2(*base_to_obj_vec))
+        # base_to_obj = calc_base_to_obj(obj_xy[0], obj_xy[1])
+        # wrist_angle = interpolate_wrist_angle(base_to_obj)
+
+        gripper_pick_quat = Quaternion(init_mocap_pose_right[3:])
+        # gripper_pick_quat_obj = Quaternion(axis=[1.0, 0.0, 0.0], degrees=-wrist_angle) * Quaternion(axis=[0.0, -1.0, 0.0], degrees=obj_angle - base_angle)
+        gripper_pick_quat_obj = obj_quat * Quaternion(axis=[1.0, 0.0, 0.0], degrees=-90+360)
+        gripper_pick_quat_obj2 = Quaternion(np.array([1, 0, 0, 0])) * Quaternion(axis=[1.0, 0.0, 0.0], degrees=360) * Quaternion(axis=[0.0, 0.0, 1.0], degrees=90)
+        
         self.left_trajectory = [
             {"t": 0, "xyz": init_mocap_pose_left[:3], "quat": init_mocap_pose_left[3:], "gripper": 0}, # sleep
             {"t": 720, "xyz": init_mocap_pose_left[:3], "quat": init_mocap_pose_left[3:], "gripper": 0}, # sleep

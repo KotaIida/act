@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 import h5py
 import tqdm
 
-from constants import PUPPET_GRIPPER_POSITION_NORMALIZE_FN, PUPPET_GRIPPER_POSITION_NORMALIZE_FN_MOBILE, CAM_NAMES_STATIC, CAM_NAMES_MOBILE
+from constants import PUPPET_GRIPPER_POSITION_NORMALIZE_FN, PUPPET_GRIPPER_POSITION_NORMALIZE_FN_MOBILE, PUPPET_GRIPPER_POSITION_NORMALIZE_FN_FRANKA, CAM_NAMES_STATIC, CAM_NAMES_MOBILE, CAM_NAMES_FRANKA
 from ee_sim_env import make_ee_sim_env
 from sim_env import make_sim_env, BOX_POSE
-from scripted_policy import PickAndTransferPolicy, PickAndPutInPolicy, InsertionPolicy, PickMultipleAndPutInPolicy, PickAndPutInPolicyMobile
+from scripted_policy import PickAndTransferPolicy, PickAndPutInPolicy, InsertionPolicy, PickMultipleAndPutInPolicy, PickAndPutInPolicyMobile, PickAndPutInPolicyFranka
 
 import IPython
 e = IPython.embed
@@ -33,12 +33,16 @@ def main(args):
     quick = args['quick']
     pickup_num = args['pickup_num']
     episode_len = args['episode_len']
-    camera_names = CAM_NAMES_MOBILE if "mobile" in task_name else CAM_NAMES_STATIC
-    inject_noise = False
     if "static" in task_name:
+        camera_names = CAM_NAMES_STATIC
         render_cam_name = 'angle'
-    else:
+    elif "mobile" in task_name:
+        camera_names = CAM_NAMES_MOBILE
         render_cam_name = 'vis'
+    elif "franka" in task_name:
+        camera_names = CAM_NAMES_FRANKA
+        render_cam_name = 'vis'
+    inject_noise = False
 
     if not os.path.isdir(dataset_dir):
         os.makedirs(dataset_dir, exist_ok=True)
@@ -61,6 +65,8 @@ def main(args):
             policy_cls = PickAndPutInPolicy
         elif "mobile" in task_name:
             policy_cls = PickAndPutInPolicyMobile
+        elif "franka" in task_name:
+            policy_cls = PickAndPutInPolicyFranka
 
     success = []
     episode_idx = start_idx
@@ -102,12 +108,18 @@ def main(args):
                 if "static" in task_name:   
                     left_ctrl = PUPPET_GRIPPER_POSITION_NORMALIZE_FN(ctrl[0])
                     right_ctrl = PUPPET_GRIPPER_POSITION_NORMALIZE_FN(ctrl[2])
+                    joint[6] = left_ctrl
+                    joint[6+7] = right_ctrl
                 elif "mobile" in task_name:
                     left_ctrl = PUPPET_GRIPPER_POSITION_NORMALIZE_FN_MOBILE(ctrl[0])
                     right_ctrl = PUPPET_GRIPPER_POSITION_NORMALIZE_FN_MOBILE(ctrl[1])
-
-                joint[6] = left_ctrl
-                joint[6+7] = right_ctrl
+                    joint[6] = left_ctrl
+                    joint[6+7] = right_ctrl
+                elif "franka" in task_name:
+                    left_ctrl = PUPPET_GRIPPER_POSITION_NORMALIZE_FN_FRANKA(ctrl[0])
+                    right_ctrl = PUPPET_GRIPPER_POSITION_NORMALIZE_FN_FRANKA(ctrl[1])
+                    joint[7] = left_ctrl
+                    joint[7+8] = right_ctrl
 
             subtask_info = episode[0].observation['env_state'].copy() # box pose at step 0
 
@@ -209,9 +221,9 @@ def main(args):
                                             chunks=(1, 480, 640, 3), )
                 # compression='gzip',compression_opts=2,)
                 # compression=32001, compression_opts=(0, 0, 0, 0, 9, 1, 1), shuffle=False)
-                qpos = obs.create_dataset('qpos', (max_timesteps, 14))
-                qvel = obs.create_dataset('qvel', (max_timesteps, 14))
-                action = root.create_dataset('action', (max_timesteps, 14))
+                qpos = obs.create_dataset('qpos', (max_timesteps, len(action)))
+                qvel = obs.create_dataset('qvel', (max_timesteps, len(action)))
+                action = root.create_dataset('action', (max_timesteps, len(action)))
 
                 for name, array in data_dict.items():
                     root[name][...] = array
