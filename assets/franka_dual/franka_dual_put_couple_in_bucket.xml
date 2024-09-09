@@ -1,7 +1,7 @@
 <mujoco model="aloha_scene">
   <compiler meshdir="assets" texturedir="assets"/>
 
-  <include file="aloha.xml"/>
+  <include file="dual_fr3.xml"/>
 
   <statistic center="0 -0.1 0.2" extent="0.6" meansize="0.05"/>
 
@@ -19,8 +19,6 @@
   </default>
 
   <worldbody>
-    <site name="worldref" pos="0 0 0"/>
-
     <light castshadow="false" directional='true' diffuse='.3 .3 .3' specular='0.3 0.3 0.3' pos='-1 -1 1'
             dir='1 1 -1'/>
     <light directional='true' diffuse='.3 .3 .3' specular='0.3 0.3 0.3' pos='1 -1 1' dir='-1 1 -1'/>
@@ -29,16 +27,19 @@
 
     <camera name="overhead_cam" fovy="78" pos="0 0.2 2.2" mode="fixed" quat="0.976332 0.216277 0 0"/>
     <camera name="worms_eye_cam" fovy="78" pos="0 -0.377167 1.0316055" mode="fixed" quat="0.672659 0.739953 0 0"/>
-    <camera name="side" pos="-1.724 0.904 1.682" xyaxes="0.003 -1.000 0.000 0.393 0.001 0.919"/>
+    <!-- <camera name="side" pos="-1.724 0.904 1.682" xyaxes="0.003 -1.000 0.000 0.393 0.001 0.919"/> -->
+    <camera name="side" pos="1.917 1.954 2.254" xyaxes="-0.504 0.863 0.000 -0.442 -0.258 0.859"/>
     <camera name="back" pos="-0.120 1.949 0.963" xyaxes="-1.000 -0.029 0.000 0.001 -0.044 0.999"/>
     <camera name="top" pos="0.000 0.70 2.500" xyaxes="1.000 0.000 0.000 0.000 1.000 0.000"/>
 
   </worldbody>
   <include file="room.xml"/>  
   <include file="table.xml"/>
+  <include file="franka_dual_base.xml"/>
   <include file="cardboard.xml"/>
   <include file="cucumber.xml"/>
   <include file="cube.xml"/>  
   <include file="bucket.xml"/>
   <include file="joint_position_actuators.xml"/>
+  <include file="keyframe_ctrl.xml"/>
 </mujoco>

@@ -90,6 +90,12 @@ def make_ee_sim_env(task_name, **kwargs):
         task = PickCucumberAndPutInEETaskFranka(random=False)
         env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
                                   n_sub_steps=None, flat_observation=False)
+    elif 'sim_put_couple_in_bucket_on_franka_dual' == task_name:
+        xml_path = os.path.join(XML_DIR_FRANKA, f'franka_dual_ee_put_couple_in_bucket.xml')
+        physics = mujoco.Physics.from_xml_path(xml_path)
+        task = PickCoupleAndPutInEETaskFranka(random=False)
+        env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
+                                  n_sub_steps=None, flat_observation=False)
     else:
         raise NotImplementedError
     return env
@@ -743,3 +749,36 @@ class PickCucumberAndPutInEETaskFranka(PickAndPutInEETaskFranka):
     def __init__(self, random=None):
         super().__init__(random=random)
         self.object_name = "cucumber_joint"
+
+
+class PickCoupleAndPutInEETaskFranka(PickAndPutInEETaskFranka):
+    def __init__(self, random=None):
+        super().__init__(random=random)
+        self.cucumber_box_bucket_pose = None
+        self.obj = None
+
+    def initialize_episode(self, physics):
+        """Sets the state of the environment at the start of each episode."""
+        self.initialize_robots(physics)
+        # randomize box position
+        if self.obj == None:
+            self.cucumber_box_bucket_pose = sample_obj_box_dst_pose(mobile=True)
+            self.obj = "cucumber"
+        elif self.obj == "cucumber":
+            self.obj = "red_box"
+        else:
+             self.cucumber_box_bucket_pose = None
+             self.obj = None
+        box_start_idx = physics.model.name2id(f'cucumber_joint', 'joint')
+        np.copyto(physics.data.qpos[box_start_idx : box_start_idx + 7 + 7 + 7], self.cucumber_box_bucket_pose)
+        # print(f"randomized cube position to {cube_position}")
+
+        super(PickAndPutInEETaskFranka, self).initialize_episode(physics)
+
+    def get_reward(self, physics):
+        # return whether cucumbert is in the bucket
+        dist_cucumber_to_bucket_center = np.linalg.norm(physics.named.data.qpos[f"{self.obj}_joint"][:2] - physics.named.data.qpos["bucket_joint"][:2])
+        object_center_z = physics.named.data.qpos[f"{self.obj}_joint"][2]
+        in_bucket = (dist_cucumber_to_bucket_center < self._bucket_radius) & (self._table_z < object_center_z < self._table_z+self._bucket_height)
+        
+        return int(in_bucket)

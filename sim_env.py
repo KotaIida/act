@@ -90,6 +90,12 @@ def make_sim_env(task_name, **kwargs):
         task = PickCucumberAndPutInTaskFranka(random=False)
         env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
                                   n_sub_steps=None, flat_observation=False)
+    elif 'sim_put_couple_in_bucket_on_franka_dual' == task_name:
+        xml_path = os.path.join(XML_DIR_FRANKA, f'franka_dual_put_couple_in_bucket.xml')
+        physics = mujoco.Physics.from_xml_path(xml_path)
+        task = PickCoupleAndPutInTaskFranka(random=False)
+        env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
+                                  n_sub_steps=None, flat_observation=False)
     else:
         raise NotImplementedError
     return env
@@ -679,6 +685,54 @@ class PickCucumberAndPutInTaskFranka(PickAndPutInTaskFranka):
         super().__init__(random=random)
         self.object_name = "cucumber_joint"        
 
+
+class PickCoupleAndPutInTaskFranka(PickAndPutInTaskFranka):
+    def __init__(self, random=None):
+        super().__init__(random=random)
+        self.obj = None
+
+    def initialize_episode(self, physics):
+        """Sets the state of the environment at the start of each episode."""
+        # TODO Notice: this function does not randomize the env configuration. Instead, set BOX_POSE from outside
+        # reset qpos, control and box position
+        with physics.reset_context():
+            physics.named.data.qpos[:18] = START_ARM_POSE_FRANKA
+            np.copyto(physics.data.ctrl, np.hstack([START_ARM_POSE_FRANKA[:8] , START_ARM_POSE_FRANKA[9:17]]))
+            assert BOX_POSE[0] is not None
+            physics.named.data.qpos[-21:] = BOX_POSE[0]
+            # print(f"{BOX_POSE=}")
+        if self.obj == None:
+            self.obj = "cucumber"
+        elif self.obj == "cucumber":
+            self.obj = "red_box"
+        else:
+            self.obj = None
+        self.cube_in_bucket = None
+        self.cucumber_in_bucket = None
+        self.cube_rewards = 0
+        self.cucumber_rewards = 0
+        super(PickAndPutInTaskFranka, self).initialize_episode(physics)
+
+    def get_reward(self, physics):
+        # return whether cucumber is in the bucket
+        dist_cucumber_to_bucket_center = np.linalg.norm(physics.named.data.qpos[f"cucumber_joint"][:2] - physics.named.data.qpos["bucket_joint"][:2])
+        dist_cube_to_bucket_center = np.linalg.norm(physics.named.data.qpos[f"red_box_joint"][:2] - physics.named.data.qpos["bucket_joint"][:2])        
+        cucumber_center_z = physics.named.data.qpos[f"cucumber_joint"][2]
+        cube_center_z = physics.named.data.qpos[f"red_box_joint"][2]
+
+        self.cucumber_in_bucket = (dist_cucumber_to_bucket_center < self._bucket_radius) & (self._table_z < cucumber_center_z < self._table_z+self._bucket_height)
+        self.cube_in_bucket = (dist_cube_to_bucket_center < self._bucket_radius) & (self._table_z < cube_center_z < self._table_z+self._bucket_height)
+        
+        if self.cucumber_in_bucket:
+            reward = 1
+            self.cucumber_rewards += 1
+        elif self.cube_in_bucket:
+            reward = 1
+            self.cube_rewards += 1
+        else:
+            reward = 0
+        return reward
+    
 
 def get_action(master_bot_left, master_bot_right):
     action = np.zeros(14)
