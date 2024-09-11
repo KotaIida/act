@@ -268,7 +268,7 @@ def sample_obj_box_dst_pose(mobile=False):
         obj_quat = np.array([np.cos(np.deg2rad(obj_angle)/2), 0, 0, np.sin(np.deg2rad(obj_angle)/2)])    
 
         box_angle = np.random.uniform(obj_angle_range[0], obj_angle_range[1])    
-        box_quat = np.array([np.cos(np.deg2rad(obj_angle)/2), 0, 0, np.sin(np.deg2rad(obj_angle)/2)])            
+        box_quat = np.array([np.cos(np.deg2rad(box_angle)/2), 0, 0, np.sin(np.deg2rad(box_angle)/2)])            
         
         obj_position = np.hstack([obj_xy, obj_z])
         box_position = np.hstack([box_xy, box_z])
