@@ -68,5 +68,5 @@
   <include file="cucumber.xml"/>
   <include file="bucket.xml"/>
   <include file="joint_position_actuators_ee.xml"/>
-  <include file="keyframe_ctrl_ee.xml"/>
+  <!-- <include file="keyframe_ctrl_ee.xml"/> -->
 </mujoco>

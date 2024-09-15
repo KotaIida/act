@@ -40,5 +40,5 @@
   <include file="cucumber.xml"/>
   <include file="bucket.xml"/>
   <include file="joint_position_actuators.xml"/>
-  <include file="keyframe_ctrl.xml"/>
+  <!-- <include file="keyframe_ctrl.xml"/> -->
 </mujoco>

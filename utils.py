@@ -330,6 +330,61 @@ def sample_objs_dst_pose(num_obj = 4):
 
     return np.concatenate(obj_poses)
 
+
+def sample_2objs_and_dst_pose():
+    rect_center_x = -0.0235
+    rect_center_y = 0.9845
+    rect_half_w = 0.272
+    rect_half_h = 0.1785    
+    rect_offset = 0.05
+    valid_w = (rect_half_w - rect_offset) * 2 
+    valid_h = (rect_half_h - rect_offset) * 2 
+    valid_x_start = rect_offset + rect_center_x - rect_half_w
+    valid_x_end = rect_center_x + rect_half_w - rect_offset
+    valid_y_start = rect_offset + rect_center_y - rect_half_h
+    valid_y_end = rect_center_y + rect_half_h - rect_offset
+
+    obj_x_range_left = [valid_x_start, valid_x_start+valid_w/3]
+    obj_x_range_right = [valid_x_start+valid_w*2/3, valid_x_end]    
+    dst_x_range = [valid_x_start+valid_w/3, valid_x_start+valid_w*2/3]
+
+    obj_y_range_left = [valid_y_start, valid_y_end]
+    obj_y_range_right = [valid_y_start, valid_y_end]
+    dst_y_range = [valid_y_start, valid_y_end]
+
+    obj_z_left = 0.842
+    obj_z_right = 0.842
+    dst_z = 0.827
+
+    obj_angle_range = [-90, 90] # -90, 90
+    obj_dst_interval = 0.055 + 0.002  + 0.1            
+
+    obj_xy_ranges_left = np.vstack([obj_x_range_left, obj_y_range_left])
+    obj_xy_ranges_right = np.vstack([obj_x_range_right, obj_y_range_right])
+    dst_xy_ranges = np.vstack([dst_x_range, dst_y_range])
+
+    dst_xy = np.random.uniform(dst_xy_ranges[:, 0], dst_xy_ranges[:, 1])    
+    obj_xy_left = np.random.uniform(obj_xy_ranges_left[:, 0], obj_xy_ranges_left[:, 1])
+    obj_xy_right = np.random.uniform(obj_xy_ranges_right[:, 0], obj_xy_ranges_right[:, 1])
+
+    while np.linalg.norm(dst_xy - obj_xy_left) < obj_dst_interval:
+        obj_xy_left = np.random.uniform(obj_xy_ranges_left[:, 0], obj_xy_ranges_left[:, 1])
+    while np.linalg.norm(dst_xy - obj_xy_right) < obj_dst_interval:
+        obj_xy_right = np.random.uniform(obj_xy_ranges_right[:, 0], obj_xy_ranges_right[:, 1])
+
+    obj_angle_left = np.random.uniform(obj_angle_range[0], obj_angle_range[1])    
+    obj_quat_left = np.array([np.cos(np.deg2rad(obj_angle_left)/2), 0, 0, np.sin(np.deg2rad(obj_angle_left)/2)])    
+    obj_angle_right = np.random.uniform(obj_angle_range[0], obj_angle_range[1])    
+    obj_quat_right = np.array([np.cos(np.deg2rad(obj_angle_right)/2), 0, 0, np.sin(np.deg2rad(obj_angle_right)/2)])    
+    dst_quat = np.array([1, 0, 0, 0])
+
+    obj_position_left = np.hstack([obj_xy_left, obj_z_left])
+    obj_position_right = np.hstack([obj_xy_right, obj_z_right])
+    dst_position = np.hstack([dst_xy, dst_z])    
+
+    return np.concatenate([obj_position_left, obj_quat_left, obj_position_right, obj_quat_right, dst_position, dst_quat])
+
+
 def sample_insertion_pose():
     # Peg
     x_range = [0.1, 0.2]

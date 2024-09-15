@@ -8,7 +8,7 @@ from constants import PUPPET_GRIPPER_POSITION_UNNORMALIZE_FN, PUPPET_GRIPPER_POS
 from constants import PUPPET_GRIPPER_POSITION_NORMALIZE_FN, PUPPET_GRIPPER_POSITION_NORMALIZE_FN_MOBILE, PUPPET_GRIPPER_POSITION_NORMALIZE_FN_FRANKA
 from constants import PUPPET_GRIPPER_VELOCITY_NORMALIZE_FN
 
-from utils import sample_box_pose, sample_obj_and_dst_pose, sample_insertion_pose, sample_obj_box_dst_pose, sample_objs_dst_pose
+from utils import sample_box_pose, sample_obj_and_dst_pose, sample_insertion_pose, sample_obj_box_dst_pose, sample_objs_dst_pose, sample_2objs_and_dst_pose
 from dm_control import mujoco
 from dm_control.rl import control
 from dm_control.suite import base
@@ -94,6 +94,12 @@ def make_ee_sim_env(task_name, **kwargs):
         xml_path = os.path.join(XML_DIR_FRANKA, f'franka_dual_ee_put_couple_in_bucket.xml')
         physics = mujoco.Physics.from_xml_path(xml_path)
         task = PickCoupleAndPutInEETaskFranka(random=False)
+        env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
+                                  n_sub_steps=None, flat_observation=False)
+    elif 'sim_put_couple_in_bucket_on_franka_dual_bimanual' == task_name:
+        xml_path = os.path.join(XML_DIR_FRANKA, f'franka_dual_ee_put_couple_in_bucket.xml')
+        physics = mujoco.Physics.from_xml_path(xml_path)
+        task = PickCoupleAndPutInEETaskFrankaBimanual(random=False)
         env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
                                   n_sub_steps=None, flat_observation=False)
     else:
@@ -309,9 +315,9 @@ class PickCoupleAndPutInEETask(PickAndPutInEETask):
         # randomize box position
         if self.obj == None:
             self.cucumber_box_bucket_pose = sample_obj_box_dst_pose()
-            self.obj = "cucumber"
-        elif self.obj == "cucumber":
             self.obj = "red_box"
+        elif self.obj == "red_box":
+            self.obj = "cucumber"
         else:
              self.cucumber_box_bucket_pose = None
              self.obj = None
@@ -589,9 +595,9 @@ class PickCoupleAndPutInEETaskMobile(PickAndPutInEETaskMobile):
         # randomize box position
         if self.obj == None:
             self.cucumber_box_bucket_pose = sample_obj_box_dst_pose(mobile=True)
-            self.obj = "cucumber"
-        elif self.obj == "cucumber":
             self.obj = "red_box"
+        elif self.obj == "red_box":
+            self.obj = "cucumber"
         else:
              self.cucumber_box_bucket_pose = None
              self.obj = None
@@ -763,9 +769,9 @@ class PickCoupleAndPutInEETaskFranka(PickAndPutInEETaskFranka):
         # randomize box position
         if self.obj == None:
             self.cucumber_box_bucket_pose = sample_obj_box_dst_pose(mobile=True)
-            self.obj = "cucumber"
-        elif self.obj == "cucumber":
             self.obj = "red_box"
+        elif self.obj == "red_box":
+            self.obj = "cucumber"
         else:
              self.cucumber_box_bucket_pose = None
              self.obj = None
@@ -782,3 +788,60 @@ class PickCoupleAndPutInEETaskFranka(PickAndPutInEETaskFranka):
         in_bucket = (dist_cucumber_to_bucket_center < self._bucket_radius) & (self._table_z < object_center_z < self._table_z+self._bucket_height)
         
         return int(in_bucket)
+    
+
+class PickCoupleAndPutInEETaskFrankaBimanual(PickAndPutInEETaskFranka):
+    def __init__(self, random=None):
+        super().__init__(random=random)
+        self.cucumber_box_bucket_pose = None
+        self.obj = None
+
+    def initialize_episode(self, physics):
+        """Sets the state of the environment at the start of each episode."""
+        self.initialize_robots(physics)
+        # randomize box position
+
+        if self.obj == None:
+            self.cucumber_box_bucket_pose = sample_2objs_and_dst_pose()
+            cube_pose = self.cucumber_box_bucket_pose[0:7].copy()
+            cucumber_pose = self.cucumber_box_bucket_pose[7:14].copy()
+            self.obj = "red_box"
+        elif self.obj == "red_box":
+            cube_pose = self.cucumber_box_bucket_pose[7:14].copy()
+            cucumber_pose = self.cucumber_box_bucket_pose[0:7].copy()
+            self.obj = "cucumber"
+        else:
+             self.cucumber_box_bucket_pose = None
+             self.obj = None
+        bucket_pose = self.cucumber_box_bucket_pose[14:21].copy()
+
+        self.cube_in_bucket = None
+        self.cucumber_in_bucket = None
+        self.cube_rewards = 0
+        self.cucumber_rewards = 0
+
+        pose = np.concatenate([cucumber_pose, cube_pose, bucket_pose])
+
+        cucumber_start_idx = physics.model.name2id(f'cucumber_joint', 'joint')
+        np.copyto(physics.data.qpos[cucumber_start_idx : cucumber_start_idx + 7*3], pose)
+
+        super(PickAndPutInEETaskFranka, self).initialize_episode(physics)
+
+    def get_reward(self, physics):
+        dist_cucumber_to_bucket_center = np.linalg.norm(physics.named.data.qpos[f"cucumber_joint"][:2] - physics.named.data.qpos["bucket_joint"][:2])
+        dist_cube_to_bucket_center = np.linalg.norm(physics.named.data.qpos[f"red_box_joint"][:2] - physics.named.data.qpos["bucket_joint"][:2])        
+        cucumber_center_z = physics.named.data.qpos[f"cucumber_joint"][2]
+        cube_center_z = physics.named.data.qpos[f"red_box_joint"][2]
+
+        self.cucumber_in_bucket = (dist_cucumber_to_bucket_center < self._bucket_radius)
+        self.cube_in_bucket = (dist_cube_to_bucket_center < self._bucket_radius)
+        
+        if self.cucumber_in_bucket:
+            self.cucumber_rewards += 1
+        elif self.cube_in_bucket:
+            self.cube_rewards += 1
+        if self.cucumber_in_bucket & self.cube_in_bucket:
+            reward = 1
+        else:
+            reward = 0
+        return reward

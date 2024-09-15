@@ -419,6 +419,67 @@ class PickCoupleAndPutInPolicyFranka(BasePolicy):
             {"t": 720, "xyz": init_mocap_pose_right[:3], "quat": gripper_pick_quat.elements, "gripper": 0}, # sleep
         ]        
 
+class PickCoupleAndPutInPolicyFrankaBimanual(BasePolicy):
+    def generate_trajectory(self, ts_first):
+        init_mocap_pose_right = ts_first.observation['mocap_pose_right']
+        init_mocap_pose_left = ts_first.observation['mocap_pose_left']
+
+        objs_and_dst_info = np.array(ts_first.observation['env_state'])
+
+        if objs_and_dst_info[0] < objs_and_dst_info[7]:
+            # Cucumber is on the left side of Cube
+            obj_xyz_left = objs_and_dst_info[:3] # Cucumber Position
+            obj_quat_left = objs_and_dst_info[3:7]  # Cucumber Quat
+            obj_xyz_right = objs_and_dst_info[7:10] # Cube Position
+            obj_quat_right = objs_and_dst_info[10:14] # Cube Position
+        else:
+            # Cucumber is on the right side of Cube
+            obj_xyz_left = objs_and_dst_info[7:10] # Cube Position
+            obj_quat_left = objs_and_dst_info[10:14] # Cube Quat
+            obj_xyz_right = objs_and_dst_info[0:3] # Cucumber Position
+            obj_quat_right = objs_and_dst_info[3:7] # Cube Quat
+
+        dst_xyz = objs_and_dst_info[14:17]
+        obj_angle_left = quaternion_to_euler(obj_quat_left)[2]
+        obj_quat_left = Quaternion(axis=[0, 0, 1], degrees=(obj_angle_left + 180)%180)
+        obj_angle_right = quaternion_to_euler(obj_quat_right)[2]
+        obj_quat_right = Quaternion(axis=[0, 0, 1], degrees=(obj_angle_right + 180)%180)
+
+        gripper_pick_quat_left = Quaternion(init_mocap_pose_left[3:])
+        gripper_pick_quat_obj_left = obj_quat_left * Quaternion(axis=[1.0, 0.0, 0.0], degrees=-90+360) * Quaternion(axis=[0.0, 1.0, 0.0], degrees=-180) 
+        gripper_pick_quat_obj2_left = Quaternion(np.array([1, 0, 0, 0])) * Quaternion(axis=[1.0, 0.0, 0.0], degrees=-360) * Quaternion(axis=[0.0, 0.0, 1.0], degrees=90+180)
+
+        gripper_pick_quat_right = Quaternion(init_mocap_pose_right[3:])
+        gripper_pick_quat_obj_right = obj_quat_right * Quaternion(axis=[1.0, 0.0, 0.0], degrees=-90+360)
+        gripper_pick_quat_obj2_right = Quaternion(np.array([1, 0, 0, 0])) * Quaternion(axis=[1.0, 0.0, 0.0], degrees=360) * Quaternion(axis=[0.0, 0.0, 1.0], degrees=90)
+
+        self.left_trajectory = [
+            {"t": 0, "xyz": init_mocap_pose_left[:3], "quat": init_mocap_pose_left[3:], "gripper": 0}, # sleep
+            {"t": 150, "xyz": obj_xyz_left + np.array([0, 0, 0.2]), "quat": gripper_pick_quat_obj_left.elements, "gripper": 1}, # approach the cucumber
+            {"t": 190, "xyz": obj_xyz_left + np.array([0, 0, -0.01]), "quat": gripper_pick_quat_obj_left.elements, "gripper": 1}, # go down
+            {"t": 230, "xyz": obj_xyz_left + np.array([0, 0, -0.01]), "quat": gripper_pick_quat_obj_left.elements, "gripper": 0}, # close gripper
+            {"t": 360, "xyz": obj_xyz_left + np.array([0, 0, 0.35]), "quat": gripper_pick_quat_obj2_left.elements, "gripper": 0}, # go up
+
+            {"t": 460, "xyz": dst_xyz + np.array([0, 0, 0.35]), "quat": gripper_pick_quat_obj2_left.elements, "gripper": 0}, # move to the bucket
+            {"t": 540, "xyz": dst_xyz + np.array([0, 0, 0.21]), "quat": gripper_pick_quat_obj2_left.elements, "gripper": 0}, # go down
+            {"t": 580, "xyz": dst_xyz + np.array([0, 0, 0.21]), "quat": gripper_pick_quat_obj2_left.elements, "gripper": 1}, # open gripper
+            {"t": 670, "xyz": init_mocap_pose_left[:3], "quat": gripper_pick_quat_left.elements, "gripper": 0}, # return
+            {"t": 800, "xyz": init_mocap_pose_left[:3], "quat": init_mocap_pose_left[3:], "gripper": 0}, # sleep
+        ]
+
+        self.right_trajectory = [
+            {"t": 0, "xyz": init_mocap_pose_right[:3], "quat": init_mocap_pose_right[3:], "gripper": 0}, # sleep
+            {"t": 150, "xyz": obj_xyz_right + np.array([0, 0, 0.2]), "quat": gripper_pick_quat_obj_right.elements, "gripper": 1}, # approach the cucumber
+            {"t": 190, "xyz": obj_xyz_right + np.array([0, 0, -0.01]), "quat": gripper_pick_quat_obj_right.elements, "gripper": 1}, # go down
+            {"t": 230, "xyz": obj_xyz_right + np.array([0, 0, -0.01]), "quat": gripper_pick_quat_obj_right.elements, "gripper": 0}, # close gripper
+            {"t": 360, "xyz": obj_xyz_right + np.array([0, 0, 0.4]), "quat": gripper_pick_quat_obj2_right.elements, "gripper": 0}, # go up
+
+            {"t": 600, "xyz": dst_xyz + np.array([0, 0, 0.4]), "quat": gripper_pick_quat_obj2_right.elements, "gripper": 0}, # move to the bucket
+            {"t": 680, "xyz": dst_xyz + np.array([0, 0, 0.21]), "quat": gripper_pick_quat_obj2_right.elements, "gripper": 0}, # go down
+            {"t": 720, "xyz": dst_xyz + np.array([0, 0, 0.21]), "quat": gripper_pick_quat_obj2_right.elements, "gripper": 1}, # open gripper
+            {"t": 790, "xyz": init_mocap_pose_right[:3], "quat": gripper_pick_quat_right.elements, "gripper": 0}, # return
+            {"t": 800, "xyz": init_mocap_pose_right[:3], "quat": gripper_pick_quat_right.elements, "gripper": 0}, # sleep
+        ]        
 
 class PickMultipleAndPutInPolicy(BasePolicy):
     def __init__(self, pick_up_num = 3, obj_num = 4, inject_noise=False):

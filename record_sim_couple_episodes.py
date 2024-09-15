@@ -9,7 +9,7 @@ import tqdm
 from constants import PUPPET_GRIPPER_POSITION_NORMALIZE_FN, PUPPET_GRIPPER_POSITION_NORMALIZE_FN_MOBILE, PUPPET_GRIPPER_POSITION_NORMALIZE_FN_FRANKA, CAM_NAMES_STATIC, CAM_NAMES_MOBILE, CAM_NAMES_FRANKA
 from ee_sim_env import make_ee_sim_env
 from sim_env import make_sim_env, BOX_POSE
-from scripted_policy import PickCoupleAndPutInPolicy, PickCoupleAndPutInPolicyMobile, PickCoupleAndPutInPolicyFranka
+from scripted_policy import PickCoupleAndPutInPolicy, PickCoupleAndPutInPolicyMobile, PickCoupleAndPutInPolicyFranka, PickCoupleAndPutInPolicyFrankaBimanual
 
 import IPython
 e = IPython.embed
@@ -52,9 +52,14 @@ def main(args):
         render_cam_name = 'vis'
         normalize_fn = PUPPET_GRIPPER_POSITION_NORMALIZE_FN_FRANKA
         right_gripper_idx = 1        
-        policy_cls = PickCoupleAndPutInPolicyFranka
         left_ctrl_idx = 7
         right_ctrl_idx = 7+8
+
+        if not "bimanual" in task_name:
+            policy_cls = PickCoupleAndPutInPolicyFranka
+        else:
+            policy_cls = PickCoupleAndPutInPolicyFrankaBimanual
+    
     inject_noise = False
 
     if not os.path.isdir(dataset_dir):
