@@ -9,7 +9,7 @@ import tqdm
 from constants import PUPPET_GRIPPER_POSITION_NORMALIZE_FN, PUPPET_GRIPPER_POSITION_NORMALIZE_FN_MOBILE, PUPPET_GRIPPER_POSITION_NORMALIZE_FN_FRANKA, CAM_NAMES_STATIC, CAM_NAMES_MOBILE, CAM_NAMES_FRANKA
 from ee_sim_env import make_ee_sim_env
 from sim_env import make_sim_env, BOX_POSE
-from scripted_policy import PickAndTransferPolicy, PickAndPutInPolicy, InsertionPolicy, PickMultipleAndPutInPolicy, PickAndPutInPolicyMobile, PickAndPutInPolicyFranka
+from scripted_policy import PickAndTransferPolicy, PickAndPutInPolicy, InsertionPolicy, PickMultipleAndPutInPolicy, PickAndPutInPolicyMobile, PickAndPutInPolicyFranka, PickAndPutInCardboardPolicyFranka
 
 import IPython
 e = IPython.embed
@@ -66,7 +66,10 @@ def main(args):
         elif "mobile" in task_name:
             policy_cls = PickAndPutInPolicyMobile
         elif "franka" in task_name:
-            policy_cls = PickAndPutInPolicyFranka
+            if "cardboard" in task_name:
+                policy_cls = PickAndPutInCardboardPolicyFranka
+            else:
+                policy_cls = PickAndPutInPolicyFranka
 
     success = []
     episode_idx = start_idx

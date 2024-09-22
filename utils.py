@@ -3,6 +3,7 @@ import torch
 import os
 import h5py
 from torch.utils.data import TensorDataset, DataLoader
+from scipy.spatial.transform import Rotation as R
 
 import IPython
 e = IPython.embed
@@ -431,3 +432,8 @@ def detach_dict(d):
 def set_seed(seed):
     torch.manual_seed(seed)
     np.random.seed(seed)
+
+
+def quaternion_to_euler(q, degrees=True):
+    r = R.from_quat([q[1], q[2], q[3], q[0]])
+    return r.as_euler('xyz', degrees=degrees)
