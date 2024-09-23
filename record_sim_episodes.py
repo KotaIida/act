@@ -41,7 +41,7 @@ def main(args):
         render_cam_name = 'vis'
     elif "franka" in task_name:
         camera_names = CAM_NAMES_FRANKA
-        render_cam_name = 'vis'
+        render_cam_name = 'side'
     inject_noise = False
 
     if not os.path.isdir(dataset_dir):

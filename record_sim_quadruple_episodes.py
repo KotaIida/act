@@ -33,7 +33,7 @@ def main(args):
     episode_len = args['episode_len']
     if "franka" in task_name:
         camera_names = CAM_NAMES_FRANKA
-        render_cam_name = 'vis'
+        render_cam_name = 'side'
         normalize_fn = PUPPET_GRIPPER_POSITION_NORMALIZE_FN_FRANKA
         right_gripper_idx = 1        
         left_ctrl_idx = 7
