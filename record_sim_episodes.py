@@ -9,7 +9,7 @@ import tqdm
 from constants import PUPPET_GRIPPER_POSITION_NORMALIZE_FN, PUPPET_GRIPPER_POSITION_NORMALIZE_FN_MOBILE, PUPPET_GRIPPER_POSITION_NORMALIZE_FN_FRANKA, CAM_NAMES_STATIC, CAM_NAMES_MOBILE, CAM_NAMES_FRANKA
 from ee_sim_env import make_ee_sim_env
 from sim_env import make_sim_env, BOX_POSE
-from scripted_policy import PickAndTransferPolicy, PickAndPutInPolicy, InsertionPolicy, PickMultipleAndPutInPolicy, PickAndPutInPolicyMobile, PickAndPutInPolicyFranka, PickAndPutInCardboardPolicyFranka
+from scripted_policy import PickAndTransferPolicy, PickAndPutInPolicy, InsertionPolicy, PickMultipleAndPutInPolicy, PickAndPutInPolicyMobile, PickAndPutInPolicyFranka, PickAndPutInCardboardVPolicyFranka, PickAndPutInCardboardHPolicyFranka
 
 import IPython
 e = IPython.embed
@@ -41,7 +41,7 @@ def main(args):
         render_cam_name = 'vis'
     elif "franka" in task_name:
         camera_names = CAM_NAMES_FRANKA
-        render_cam_name = 'side'
+        render_cam_name = 'angle'
     inject_noise = False
 
     if not os.path.isdir(dataset_dir):
@@ -66,8 +66,10 @@ def main(args):
         elif "mobile" in task_name:
             policy_cls = PickAndPutInPolicyMobile
         elif "franka" in task_name:
-            if "cardboard" in task_name:
-                policy_cls = PickAndPutInCardboardPolicyFranka
+            if "cardboard_v" in task_name:
+                policy_cls = PickAndPutInCardboardVPolicyFranka
+            elif "cardboard_h" in task_name:
+                policy_cls = PickAndPutInCardboardHPolicyFranka
             else:
                 policy_cls = PickAndPutInPolicyFranka
 
@@ -171,7 +173,6 @@ def main(args):
                     success.append(0)
                     print(f"{episode_idx=} Failed, {episode_return=}")
                     continue
-
 
 
             plt.close()

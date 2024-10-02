@@ -38,6 +38,12 @@
     <camera name="side" pos="1.917 1.954 2.254" xyaxes="-0.504 0.863 0.000 -0.442 -0.258 0.859"/>
     <camera name="back" pos="-0.120 1.949 0.963" xyaxes="-1.000 -0.029 0.000 0.001 -0.044 0.999"/>
     <camera name="top" pos="0.000 0.70 2.500" xyaxes="1.000 0.000 0.000 0.000 1.000 0.000"/>
+    <geom type="box" pos="0 0.0822 1.272" size="0.02 0.02 0.45" conaffinity="1" contype="1" rgba="0.4 0.4 0.4 1" />
+    <body name="front_cam" pos="0 0.086 1.658" euler="-2.0543951023931953 0 0">
+      <geom pos="0 -0.0824748 -0.0095955" quat="0 0 -0.21644 -0.976296"  type="mesh" mesh="d405_solid" group="2" material="black" contype="0" conaffinity="0"/>
+      <geom class="collision" pos="0 -0.0824748 -0.0095955" quat="0 0 -0.21644 -0.976296"  type="mesh" mesh="d405_solid" />
+      <camera name="front_cam" pos="0 -0.0824748 -0.0095955" mode="fixed" euler="2.775955359 0 0" fovy="40"/>
+    </body>    
 
     <body mocap="true" name="mocap_left" pos="-0.67529203 0.4947 1.54329203" quat="0.4999999912700426 1.234602353683556e-08 0.5000000087299565 -0.7071067811865471">
     <!-- <body mocap="true" name="mocap_left" pos="-0.46210105 0.96119948 1.33010105" quat="0.6532681955141636 -0.2705659741758004 0.27063012531805775 -0.6532947677873284"> -->
@@ -59,7 +65,6 @@
         <site pos="-0.015 0.015 0" size="0.0212132 0.003 0.003" type="box" rgba="1 0 0 1" euler="0 0 0.785398"/>
         <site pos="0 0.015 0.015" size="0.0212132 0.003 0.003" type="box" rgba="1 0 0 1" euler="-1.570796 1.570796  -0.785398"/>
     </body>
-
   </worldbody>
   <include file="room.xml"/>  
   <include file="table.xml"/>

@@ -1,0 +1,74 @@
+<mujoco model="aloha_scene">
+  <compiler meshdir="one_x/assets" texturedir="one_x/assets"/>
+
+  <include file="dual_fr3.xml"/>
+
+  <statistic center="0 -0.1 0.2" extent="0.6" meansize="0.05"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global azimuth="90" elevation="-20"/>
+    <quality shadowsize="8192"/>
+  </visual>
+
+  <default>
+    <default class="frame">
+      <geom group="1" type="mesh" material="black"/>
+    </default>
+  </default>
+
+  <equality>
+    <weld body1="mocap_left" body2="fr3_l_hand" solref="0.01 1" solimp=".25 .25 0.001" />
+    <weld body1="mocap_right" body2="fr3_r_hand" solref="0.01 1" solimp=".25 .25 0.001" />
+  </equality>  
+
+  <worldbody>
+    <site name="worldref" pos="0 0 0"/>
+
+    <light castshadow="false" directional='true' diffuse='.3 .3 .3' specular='0.3 0.3 0.3' pos='-1 -1 1'
+            dir='1 1 -1'/>
+    <light directional='true' diffuse='.3 .3 .3' specular='0.3 0.3 0.3' pos='1 -1 1' dir='-1 1 -1'/>
+    <light castshadow="false" directional='true' diffuse='.3 .3 .3' specular='0.3 0.3 0.3' pos='0 1 1'
+            dir='0 -1 -1'/>
+
+    <camera name="overhead_cam" fovy="78" pos="0 0.2 2.2" mode="fixed" quat="0.976332 0.216277 0 0"/>
+    <camera name="worms_eye_cam" fovy="78" pos="0 -0.377167 1.0316055" mode="fixed" quat="0.672659 0.739953 0 0"/>
+    <!-- <camera name="side" pos="-1.724 0.904 1.682" xyaxes="0.003 -1.000 0.000 0.393 0.001 0.919"/> -->
+    <camera name="side" pos="1.917 1.954 2.254" xyaxes="-0.504 0.863 0.000 -0.442 -0.258 0.859"/>
+    <camera name="back" pos="-0.120 1.949 0.963" xyaxes="-1.000 -0.029 0.000 0.001 -0.044 0.999"/>
+    <camera name="top" pos="0.000 0.70 3.500" xyaxes="1.000 0.000 0.000 0.000 1.000 0.000"/>
+    <geom type="box" pos="0 0.0822 1.472" size="0.02 0.02 0.45" conaffinity="1" contype="1" rgba="0.4 0.4 0.4 1" />
+    <body name="front_cam" pos="0 0.086 1.858" euler="-2.0543951023931953 0 0">
+      <geom pos="0 -0.0824748 -0.0095955" quat="0 0 -0.21644 -0.976296"  type="mesh" mesh="d405_solid" group="2" material="black" contype="0" conaffinity="0"/>
+      <geom class="collision" pos="0 -0.0824748 -0.0095955" quat="0 0 -0.21644 -0.976296"  type="mesh" mesh="d405_solid" />
+      <camera name="front_cam" pos="0 -0.0824748 -0.0095955" mode="fixed" euler="2.775955359 0 0" fovy="40"/>
+    </body>    
+
+    <body mocap="true" name="mocap_left" pos="-0.67529203 0.4947 1.54329203" quat="0.4999999912700426 1.234602353683556e-08 0.5000000087299565 -0.7071067811865471">
+    <!-- <body mocap="true" name="mocap_left" pos="-0.46210105 0.96119948 1.33010105" quat="0.6532681955141636 -0.2705659741758004 0.27063012531805775 -0.6532947677873284"> -->
+        <site pos="0 0 0.015" size="0.003 0.003 0.015" type="box" name="mocap_left_site1" rgba="1 0 0 1"/>
+        <site pos="0 0 0" size="0.003 0.03 0.003" type="box" name="mocap_left_site2" rgba="1 0 0 1"/>
+        <site pos="0 0 0" size="0.03 0.003 0.003" type="box" name="mocap_left_site3" rgba="1 0 0 1"/>
+
+        <site pos="0.015 0.015 0" size="0.0212132 0.003 0.003" type="box" rgba="1 0 0 1" euler="0 0 -0.785398"/>
+        <site pos="-0.015 0.015 0" size="0.0212132 0.003 0.003" type="box" rgba="1 0 0 1" euler="0 0 0.785398"/>
+        <site pos="0 0.015 0.015" size="0.0212132 0.003 0.003" type="box" rgba="1 0 0 1" euler="-1.570796 1.570796  -0.785398"/>
+    </body>
+    <body mocap="true" name="mocap_right" pos="0.67529203 0.4947 1.54329203" quat="-0.7071067811865472 0.5000000087299564 -1.2346023370302106e-08 -0.49999999127004247">
+    <!-- <body mocap="true" name="mocap_right" pos="0.46210105 0.96119948 1.33010105" quat="-0.6532947677873284 0.2706301253180578 0.27056597417580075 -0.6532681955141635"> -->
+        <site pos="0 0 0.015" size="0.003 0.003 0.015" type="box" name="mocap_right_site1" rgba="1 0 0 1"/>
+        <site pos="0 0 0" size="0.003 0.03 0.003" type="box" name="mocap_right_site2" rgba="1 0 0 1"/>
+        <site pos="0 0 0" size="0.03 0.003 0.003" type="box" name="mocap_right_site3" rgba="1 0 0 1"/>
+
+        <site pos="0.015 0.015 0" size="0.0212132 0.003 0.003" type="box" rgba="1 0 0 1" euler="0 0 -0.785398"/>
+        <site pos="-0.015 0.015 0" size="0.0212132 0.003 0.003" type="box" rgba="1 0 0 1" euler="0 0 0.785398"/>
+        <site pos="0 0.015 0.015" size="0.0212132 0.003 0.003" type="box" rgba="1 0 0 1" euler="-1.570796 1.570796  -0.785398"/>
+    </body>
+    <!-- <geom type="sphere" size="0.01" pos="0.13 1 0.7"/> -->
+  </worldbody>
+  <include file="franka_dual_base.xml"/>
+  <include file="one_x/put_cushion_in_cardboard_h.xml"/>
+  <include file="joint_position_actuators_ee.xml"/>
+  <!-- <include file="keyframe_ctrl_ee.xml"/> -->
+</mujoco>

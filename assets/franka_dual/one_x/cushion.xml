@@ -1,0 +1,9 @@
+<mujoco>
+  <worldbody>
+    <body name="cushion" pos=".0 0.2 1.1" quat="1 0 0 0">
+      <joint name="cushion_joint" type="free" frictionloss="0.001" />
+      <geom condim="4" solimp="0.9 0.95 0.001" solref="0.02 1" friction="2 0.1 0.001" pos="0 0 0"  name="cushion" type="box" size=".015 .015 .1"  rgba="0.91764706 0.83921569 0.72941176 1"/>
+      <inertial pos="0 0 0" mass="0.01" diaginertia="0.002 0.002 0.002" />
+  </body>
+  </worldbody>
+</mujoco>
