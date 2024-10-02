@@ -103,10 +103,16 @@ def make_ee_sim_env(task_name, **kwargs):
         task = PickQuadrupleAndPutInEETaskFrankaBimanual(random=False)
         env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
                                   n_sub_steps=None, flat_observation=False)
-    elif 'sim_put_cucumber_in_cardboard_on_franka_dual' == task_name:
-        xml_path = os.path.join(XML_DIR_FRANKA, f'franka_dual_ee_put_cucumber_in_cardboard.xml')
+    elif 'sim_put_cushion_in_cardboard_v_on_franka_dual' == task_name:
+        xml_path = os.path.join(XML_DIR_FRANKA, f'franka_dual_ee_put_cushion_in_cardboard_v.xml')
         physics = mujoco.Physics.from_xml_path(xml_path)
-        task = PickCucumberAndPutInCardboardEETaskFranka(random=False)
+        task = PickCushionAndPutInCardboardEETaskFranka(random=False)
+        env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
+                                  n_sub_steps=None, flat_observation=False)
+    elif 'sim_put_cushion_in_cardboard_h_on_franka_dual' == task_name:
+        xml_path = os.path.join(XML_DIR_FRANKA, f'franka_dual_ee_put_cushion_in_cardboard_h.xml')
+        physics = mujoco.Physics.from_xml_path(xml_path)
+        task = PickCushionAndPutInCardboardEETaskFranka(random=False)
         env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
                                   n_sub_steps=None, flat_observation=False)
     else:
@@ -765,27 +771,26 @@ class PickCucumberAndPutInEETaskFranka(PickAndPutInEETaskFranka):
         self.object_name = "cucumber_joint"
 
 
-class PickCucumberAndPutInCardboardEETaskFranka(PickAndPutInEETaskFranka):
+class PickCushionAndPutInCardboardEETaskFranka(PickAndPutInEETaskFranka):
     def __init__(self, random=None):
         super().__init__(random=random)
-        self._cucumbe_joint_name = "cucumber_joint"
+        self._cushion_joint_name = "cushion_joint"
         self._cardboard_joint_name = "cardboard_joint"
         self._cardboard_btm_geom_name = "sku_cardboard_btm"
-        self._cucumber_geom_name = "cucumber"
+        self._cushion_geom_name = "cushion_lower"
 
     def initialize_episode(self, physics):
         """Sets the state of the environment at the start of each episode."""
         self.initialize_robots(physics)
-        self.cardboard_quat = self.sample_cardboard_quat()
-        start_idx = physics.model.name2id(self._cucumbe_joint_name, 'joint')
-        np.copyto(physics.data.qpos[start_idx+7+3 : start_idx+7+7], self.cardboard_quat)
+        self.cardboard_qpos = self.sample_cardboard_quat()
+        start_idx = physics.model.name2id(self._cushion_joint_name, 'joint')
+        np.copyto(physics.data.qpos[start_idx+7 : start_idx+7+7], self.cardboard_qpos)
         super(PickAndPutInEETaskFranka, self).initialize_episode(physics)
 
         self._cardboard_btm_size = physics.model.geom(self._cardboard_btm_geom_name).size
         self._cardboard_half_w, self._cardboard_half_h, self._cardboard_half_th = self._cardboard_btm_size
-        self._cucumber_size = physics.model.geom(self._cucumber_geom_name).size
-        self._cucumber_half_w, self._cucumber_half_h, self.cucumber_half_th = self._cucumber_size
-
+        self._cushion_size = physics.model.geom(self._cushion_geom_name).size
+        self._cushion_half_w, self._cushion_half_h, self._cushion_half_th = self._cushion_size
 
     def get_reward(self, physics):
         cardboard_qpos = physics.data.joint(self._cardboard_joint_name).qpos
@@ -794,22 +799,29 @@ class PickCucumberAndPutInCardboardEETaskFranka(PickAndPutInEETaskFranka):
         min_x, max_x = cardboard_xyz[0] - self._cardboard_half_w, cardboard_xyz[0] + self._cardboard_half_w
         min_y, max_y = cardboard_xyz[1] - self._cardboard_half_h, cardboard_xyz[1] + self._cardboard_half_h
 
-        cucumber_qpos = physics.data.joint(self._cucumbe_joint_name).qpos
-        cucumber_xyz = cucumber_qpos[:3]
-        cucumber_xy_rel = cucumber_xyz[:2] - cardboard_xyz[:2]
+        cushion_qpos = physics.data.joint(self._cushion_joint_name).qpos
+        cushion_xyz = cushion_qpos[:3]
+        cushion_xy_rel = cushion_xyz[:2] - cardboard_xyz[:2]
         angle = quaternion_to_euler(cardboard_quat, degrees=False)[2]
-        cucumber_xy_rel_rot = np.array([[np.cos(-angle), -np.sin(-angle)], [np.sin(-angle), np.cos(-angle)]]) @ cucumber_xy_rel
+        cushion_xy_rel_rot = np.array([[np.cos(-angle), -np.sin(-angle)], [np.sin(-angle), np.cos(-angle)]]) @ cushion_xy_rel
+        cushion_xy_rot = cushion_xy_rel_rot + cardboard_xyz[:2]
 
-        in_cardboard = (min_x < cucumber_xy_rel_rot[0] < max_x) & (min_y < cucumber_xy_rel_rot[1] < max_y) & (cardboard_xyz[2] + self._cardboard_half_th < cucumber_xyz[2] < cardboard_xyz[2] + self._cardboard_half_th*2)
+        in_cardboard = (min_x < cushion_xy_rot[0] < max_x) & (min_y < cushion_xy_rot[1] < max_y) & (cardboard_xyz[2] + self._cardboard_half_th < cushion_xyz[2] < cardboard_xyz[2] + self._cardboard_half_th + self._cushion_half_h*2)
         
         return int(in_cardboard)
     
     def sample_cardboard_quat(self):
-        angle_range = [-180, 180]
+        angle_range = [-180, 180] #-180, 180
+        x_range = [0.1, 0.3] # 0.1, 0.3
+        y_range = [0.88, 0.98] # 0.88, 0.98
+        z_range = [0.7, 0.7]
+
+        ranges = np.vstack([x_range, y_range, z_range])
+        pos = np.random.uniform(ranges[:, 0], ranges[:, 1])
         angle = np.random.uniform(angle_range[0], angle_range[1])    
         quat = np.array([np.cos(np.deg2rad(angle)/2), 0, 0, np.sin(np.deg2rad(angle)/2)])    
 
-        return quat
+        return np.concatenate([pos, quat])
 
 
 class PickCoupleAndPutInEETaskFranka(PickAndPutInEETaskFranka):
