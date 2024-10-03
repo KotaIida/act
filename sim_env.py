@@ -5,18 +5,22 @@ import matplotlib.pyplot as plt
 from dm_control import mujoco
 from dm_control.rl import control
 from dm_control.suite import base
+from scipy.spatial.transform import Rotation as R
 
 from constants import DT, XML_DIR_STATIC, XML_DIR_MOBILE, XML_DIR_FRANKA, START_ARM_POSE, START_ARM_POSE_MOBILE , START_ARM_POSE_FRANKA
 from constants import PUPPET_GRIPPER_POSITION_UNNORMALIZE_FN, PUPPET_GRIPPER_POSITION_UNNORMALIZE_FN_MOBILE, PUPPET_GRIPPER_POSITION_UNNORMALIZE_FN_FRANKA
 from constants import MASTER_GRIPPER_POSITION_NORMALIZE_FN
 from constants import PUPPET_GRIPPER_POSITION_NORMALIZE_FN, PUPPET_GRIPPER_POSITION_NORMALIZE_FN_MOBILE, PUPPET_GRIPPER_POSITION_NORMALIZE_FN_FRANKA
 from constants import PUPPET_GRIPPER_VELOCITY_NORMALIZE_FN
-from utils import quaternion_to_euler
 
 import IPython
 e = IPython.embed
 
 BOX_POSE = [None] # to be changed from outside
+
+def quaternion_to_euler(q, degrees=True):
+    r = R.from_quat([q[1], q[2], q[3], q[0]])
+    return r.as_euler('xyz', degrees=degrees)
 
 def make_sim_env(task_name, **kwargs):
     """
