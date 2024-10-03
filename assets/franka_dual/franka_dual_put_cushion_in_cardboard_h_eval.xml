@@ -1,0 +1,48 @@
+<mujoco model="aloha_scene">
+  <compiler meshdir="one_x/assets" texturedir="one_x/assets"/>
+
+  <include file="dual_fr3.xml"/>
+
+  <statistic center="0 -0.1 0.2" extent="0.6" meansize="0.05"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global azimuth="90" elevation="-20"/>
+    <quality shadowsize="8192"/>
+  </visual>
+
+  <default>
+    <default class="frame">
+      <geom group="1" type="mesh" material="black"/>
+    </default>
+  </default>
+
+  <worldbody>
+    <site name="worldref" pos="0 0 0"/>
+
+    <light castshadow="false" directional='true' diffuse='.3 .3 .3' specular='0.3 0.3 0.3' pos='-1 -1 1'
+            dir='1 1 -1'/>
+    <light directional='true' diffuse='.3 .3 .3' specular='0.3 0.3 0.3' pos='1 -1 1' dir='-1 1 -1'/>
+    <light castshadow="false" directional='true' diffuse='.3 .3 .3' specular='0.3 0.3 0.3' pos='0 1 1'
+            dir='0 -1 -1'/>
+
+    <camera name="overhead_cam" fovy="78" pos="0 0.2 2.2" mode="fixed" quat="0.976332 0.216277 0 0"/>
+    <camera name="worms_eye_cam" fovy="78" pos="0 -0.377167 1.0316055" mode="fixed" quat="0.672659 0.739953 0 0"/>
+    <!-- <camera name="side" pos="-1.724 0.904 1.682" xyaxes="0.003 -1.000 0.000 0.393 0.001 0.919"/> -->
+    <camera name="side" pos="1.917 1.954 2.254" xyaxes="-0.504 0.863 0.000 -0.442 -0.258 0.859"/>
+    <camera name="back" pos="-0.120 1.949 0.963" xyaxes="-1.000 -0.029 0.000 0.001 -0.044 0.999"/>
+    <camera name="top" pos="0.000 0.70 3.500" xyaxes="1.000 0.000 0.000 0.000 1.000 0.000"/>
+    <geom type="box" pos="0 0.0822 1.472" size="0.02 0.02 0.45" conaffinity="1" contype="1" rgba="0.4 0.4 0.4 1" />
+    <body name="front_cam" pos="0 0.086 1.858" euler="-2.0543951023931953 0 0">
+      <geom pos="0 -0.0824748 -0.0095955" quat="0 0 -0.21644 -0.976296"  type="mesh" mesh="d405_solid" group="2" material="black" contype="0" conaffinity="0"/>
+      <geom class="collision" pos="0 -0.0824748 -0.0095955" quat="0 0 -0.21644 -0.976296"  type="mesh" mesh="d405_solid" />
+      <camera name="front_cam" pos="0 -0.0824748 -0.0095955" mode="fixed" euler="2.775955359 0 0" fovy="40"/>
+    </body>    
+
+  </worldbody>
+  <include file="franka_dual_base.xml"/>
+  <include file="one_x/put_cushion_in_cardboard_h_eval.xml"/>
+  <include file="joint_position_actuators.xml"/>
+  <!-- <include file="keyframe_ctrl.xml"/> -->
+</mujoco>

@@ -115,6 +115,18 @@ def make_sim_env(task_name, **kwargs):
         task = PickCushionAndPutInCardboardTaskFranka(random=False)
         env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
                                   n_sub_steps=None, flat_observation=False)
+    elif 'sim_put_cushion_in_cardboard_v_eval_on_franka_dual' == task_name:
+        xml_path = os.path.join(XML_DIR_FRANKA, f'franka_dual_put_cushion_in_cardboard_v_eval.xml')
+        physics = mujoco.Physics.from_xml_path(xml_path)
+        task = PickCushionAndPutInCardboardTaskFranka(random=False)
+        env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
+                                  n_sub_steps=None, flat_observation=False)
+    elif 'sim_put_cushion_in_cardboard_h_eval_on_franka_dual' == task_name:
+        xml_path = os.path.join(XML_DIR_FRANKA, f'franka_dual_put_cushion_in_cardboard_h_eval.xml')
+        physics = mujoco.Physics.from_xml_path(xml_path)
+        task = PickCushionAndPutInCardboardTaskFranka(random=False)
+        env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
+                                  n_sub_steps=None, flat_observation=False)
     else:
         raise NotImplementedError
     return env
