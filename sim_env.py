@@ -113,6 +113,12 @@ def make_sim_env(task_name, **kwargs):
         task = PickCushionAndPutInCardboardTaskFranka(random=False)
         env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
                                   n_sub_steps=None, flat_observation=False)
+    elif 'sim_put_cushion_in_cardboard_v_recovery_on_franka_dual' == task_name:
+        xml_path = os.path.join(XML_DIR_FRANKA, f'franka_dual_put_cushion_in_cardboard_v_recovery.xml')
+        physics = mujoco.Physics.from_xml_path(xml_path)
+        task = PickCushionAndPutInCardboardRecoveryTaskFranka(random=False)
+        env = control.Environment(physics, task, time_limit=50, control_timestep=DT,
+                                  n_sub_steps=None, flat_observation=False)
     elif 'sim_put_cushion_in_cardboard_h_on_franka_dual' == task_name:
         xml_path = os.path.join(XML_DIR_FRANKA, f'franka_dual_put_cushion_in_cardboard_h.xml')
         physics = mujoco.Physics.from_xml_path(xml_path)
@@ -739,6 +745,48 @@ class PickCushionAndPutInCardboardTaskFranka(PickAndPutInTaskFranka):
             np.copyto(physics.data.ctrl, np.hstack([START_ARM_POSE_FRANKA[:8] , START_ARM_POSE_FRANKA[9:17]]))
             assert BOX_POSE[0] is not None
             physics.named.data.qpos[-14:] = BOX_POSE[0]
+            # print(f"{BOX_POSE=}")
+        super(PickAndPutInTaskFranka, self).initialize_episode(physics)
+
+        self._cardboard_btm_size = physics.model.geom(self._cardboard_btm_geom_name).size
+        self._cardboard_half_w, self._cardboard_half_h, self._cardboard_half_th = self._cardboard_btm_size
+        self._cushion_size = physics.model.geom(self._cushion_geom_name).size
+        self._cushion_half_w, self._cushion_half_h, self._cushion_half_th = self._cushion_size
+
+    def get_reward(self, physics):
+        cardboard_qpos = physics.data.joint(self._cardboard_joint_name).qpos
+        cardboard_xyz = cardboard_qpos[:3]
+        cardboard_quat = cardboard_qpos[3:]
+        min_x, max_x = cardboard_xyz[0] - self._cardboard_half_w, cardboard_xyz[0] + self._cardboard_half_w
+        min_y, max_y = cardboard_xyz[1] - self._cardboard_half_h, cardboard_xyz[1] + self._cardboard_half_h
+
+        cushion_qpos = physics.data.joint(self._cushion_joint_name).qpos
+        cushion_xyz = cushion_qpos[:3]
+        cushion_xy_rel = cushion_xyz[:2] - cardboard_xyz[:2]
+        angle = quaternion_to_euler(cardboard_quat, degrees=False)[2]
+        cushion_xy_rel_rot = np.array([[np.cos(-angle), -np.sin(-angle)], [np.sin(-angle), np.cos(-angle)]]) @ cushion_xy_rel
+        cushion_xy_rot = cushion_xy_rel_rot + cardboard_xyz[:2]
+
+        in_cardboard = (min_x < cushion_xy_rot[0] < max_x) & (min_y < cushion_xy_rot[1] < max_y) & (cardboard_xyz[2] + self._cardboard_half_th < cushion_xyz[2] < cardboard_xyz[2] + self._cardboard_half_th + self._cushion_half_h*2)
+        
+        return int(in_cardboard)
+    
+
+class PickCushionAndPutInCardboardRecoveryTaskFranka(PickAndPutInTaskFranka):
+    def __init__(self, random=None):
+        super().__init__(random=random)
+        self._cushion_joint_name = "cushion_recovery_joint"
+        self._cardboard_joint_name = "cardboard_joint"
+        self._cardboard_btm_geom_name = "sku_cardboard_btm"
+        self._cushion_geom_name = "cushion_recovery_lower"
+
+    def initialize_episode(self, physics):
+        """Sets the state of the environment at the start of each episode."""
+        with physics.reset_context():
+            physics.named.data.qpos[:18] = START_ARM_POSE_FRANKA
+            np.copyto(physics.data.ctrl, np.hstack([START_ARM_POSE_FRANKA[:8] , START_ARM_POSE_FRANKA[9:17]]))
+            assert BOX_POSE[0] is not None
+            physics.named.data.qpos[-21:] = BOX_POSE[0]
             # print(f"{BOX_POSE=}")
         super(PickAndPutInTaskFranka, self).initialize_episode(physics)
 

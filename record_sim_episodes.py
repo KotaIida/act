@@ -9,7 +9,7 @@ import tqdm
 from constants import PUPPET_GRIPPER_POSITION_NORMALIZE_FN, PUPPET_GRIPPER_POSITION_NORMALIZE_FN_MOBILE, PUPPET_GRIPPER_POSITION_NORMALIZE_FN_FRANKA, CAM_NAMES_STATIC, CAM_NAMES_MOBILE, CAM_NAMES_FRANKA
 from ee_sim_env import make_ee_sim_env
 from sim_env import make_sim_env, BOX_POSE
-from scripted_policy import PickAndTransferPolicy, PickAndPutInPolicy, InsertionPolicy, PickMultipleAndPutInPolicy, PickAndPutInPolicyMobile, PickAndPutInPolicyFranka, PickAndPutInCardboardVPolicyFranka, PickAndPutInCardboardHPolicyFranka
+from scripted_policy import PickAndTransferPolicy, PickAndPutInPolicy, InsertionPolicy, PickMultipleAndPutInPolicy, PickAndPutInPolicyMobile, PickAndPutInPolicyFranka, PickAndPutInCardboardVPolicyFranka, PickAndPutInCardboardHPolicyFranka, PickAndPutInCardboardVRecoveryPolicyFranka
 
 import IPython
 e = IPython.embed
@@ -67,7 +67,10 @@ def main(args):
             policy_cls = PickAndPutInPolicyMobile
         elif "franka" in task_name:
             if "cardboard_v" in task_name:
-                policy_cls = PickAndPutInCardboardVPolicyFranka
+                if "recovery" in task_name:
+                    policy_cls = PickAndPutInCardboardVRecoveryPolicyFranka
+                else:
+                    policy_cls = PickAndPutInCardboardVPolicyFranka
             elif "cardboard_h" in task_name:
                 policy_cls = PickAndPutInCardboardHPolicyFranka
             else:

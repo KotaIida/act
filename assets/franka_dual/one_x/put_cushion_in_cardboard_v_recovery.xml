@@ -1,0 +1,8 @@
+<mujoco>
+  <compiler meshdir="assets" texturedir="assets"/>
+  <include file="room.xml"/>  
+  <include file="one_x/cushion_server.xml"/>
+  <include file="one_x/cushion_recovery.xml"/>
+  <include file="conveyor_belt.xml"/>
+  <include file="sku_set_train_v.xml"/>
+</mujoco>

@@ -1,0 +1,12 @@
+<mujoco>
+  <worldbody>
+    <body name="cushion_recovery" pos=".76 0.93 0.717" quat="1 0 0 0">
+    <!-- <body name="cushion_recovery" pos=".71 0.93 0.717" quat="0.5 0.5 0.5 0.5 "> -->
+      <joint name="cushion_recovery_joint" type="free" frictionloss="0.01" />
+      <geom name="cushion_recovery_lower" condim="4" solimp="0.9 0.95 0.001" solref="0.02 1" friction="2 0.1 0.001" pos="0 0.05 0" type="box" size=".015 .049 .015"  rgba="0.51764706 0.43921569 0.32941176 1"/>
+      <geom name="cushion_recovery_stopper" condim="4" solimp="0.9 0.95 0.001" solref="0.02 1" friction="2 0.1 0.001" pos="0 0 0" type="box" size=".017 .001 .017"  rgba="0.51764706 0.43921569 0.32941176 1"/>
+      <geom name="cushion_recovery_upper" condim="4" solimp="0.9 0.95 0.001" solref="0.02 1" friction="2 0.1 0.001" pos="0 -0.05 0" type="box" size=".015 .049 .015"  rgba="0.51764706 0.43921569 0.32941176 1"/>
+      <inertial pos="0 0 0" mass="0.01" diaginertia="0.002 0.002 0.002" />
+    </body>
+  </worldbody>
+</mujoco>

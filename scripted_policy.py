@@ -345,16 +345,63 @@ class PickAndPutInCardboardVPolicyFranka(BasePolicy):
             {"t": 600, "xyz": init_mocap_pose_right[:3], "quat": gripper_pick_quat.elements, "gripper": 0}, # sleep
         ]        
 
-        if self.careful:
-            for i, dic in enumerate(self.right_trajectory):
-                self.right_trajectory[i]["t"] *= 2
-            for i, dic in enumerate(self.left_trajectory):
-                self.left_trajectory[i]["t"] *= 2
-        if self.quick:
-            for i, dic in enumerate(self.right_trajectory):
-                self.right_trajectory[i]["t"] //= 2
-            for i, dic in enumerate(self.left_trajectory):
-                self.left_trajectory[i]["t"] //= 2
+
+class PickAndPutInCardboardVRecoveryPolicyFranka(BasePolicy):
+    def __init__(self, inject_noise=False, careful=False, quick=False):
+        self.inject_noise = inject_noise
+        self.step_count = 0
+        self.left_trajectory = None
+        self.right_trajectory = None
+        self.careful = careful
+        self.quick = quick
+        self._x_offset = 0.13
+        self._y_offset = 0.00
+
+    def generate_trajectory(self, ts_first):
+        init_mocap_pose_right = ts_first.observation['mocap_pose_right']
+        init_mocap_pose_left = ts_first.observation['mocap_pose_left']
+
+        obj_and_dst_info = np.array(ts_first.observation['env_state'])
+        obj_xyz = obj_and_dst_info[7:10]
+        obj_quat = obj_and_dst_info[10:14]
+        obj_angle = quaternion_to_euler(obj_quat)[2]
+        obj_quat = Quaternion(axis=[0, 0, 1], degrees=(obj_angle + 180)%180)
+
+        dst_xyz = obj_and_dst_info[14:17]
+        dst_quat = obj_and_dst_info[17:]
+        dst_angle = quaternion_to_euler(dst_quat, degrees=False)[2]        
+
+        dst_xyz[:2] += np.array([[np.cos(dst_angle), -np.sin(dst_angle)], [np.sin(dst_angle), np.cos(dst_angle)]]) @ np.array([self._x_offset, self._y_offset])
+
+        if -45 <= np.rad2deg(dst_angle) < 135:
+            dst_quat = Quaternion(axis=[0, 0, 1], degrees=np.rad2deg(dst_angle))
+        elif 135 <= np.rad2deg(dst_angle) < 180:
+            dst_quat = Quaternion(axis=[0, 0, 1], degrees=np.rad2deg(dst_angle) - 180)
+        else:
+            dst_quat = Quaternion(axis=[0, 0, 1], degrees=np.rad2deg(dst_angle) + 180)            
+
+        gripper_pick_quat = Quaternion(init_mocap_pose_right[3:])
+        gripper_pick_quat_obj = obj_quat * Quaternion(axis=[1.0, 0.0, 0.0], degrees=-90+360)        
+        gripper_pick_quat_obj2 = dst_quat * Quaternion(axis=[1.0, 0.0, 0.0], degrees=-90+360)
+        
+        self.left_trajectory = [
+            {"t": 0, "xyz": init_mocap_pose_left[:3], "quat": init_mocap_pose_left[3:], "gripper": 0}, # sleep
+            {"t": 600, "xyz": init_mocap_pose_left[:3], "quat": init_mocap_pose_left[3:], "gripper": 0}, # sleep
+        ]
+
+        self.right_trajectory = [
+            {"t": 0, "xyz": init_mocap_pose_right[:3], "quat": init_mocap_pose_right[3:], "gripper": 1}, # sleep
+            {"t": 150, "xyz": obj_xyz + np.array([0, 0, 0.2]), "quat": gripper_pick_quat_obj.elements, "gripper": 1}, # approach the cushion
+            {"t": 190, "xyz": obj_xyz + np.array([0, 0, -0.01]), "quat": gripper_pick_quat_obj.elements, "gripper": 1}, # go down
+            {"t": 230, "xyz": obj_xyz + np.array([0, 0, -0.01]), "quat": gripper_pick_quat_obj.elements, "gripper": 0}, # close gripper
+            {"t": 310, "xyz": obj_xyz + np.array([0, 0, 0.3]), "quat": gripper_pick_quat_obj2.elements, "gripper": 0}, # go up
+            {"t": 400, "xyz": dst_xyz + np.array([0, 0, 0.3]), "quat": gripper_pick_quat_obj2.elements, "gripper": 0}, # move to dst
+            {"t": 480, "xyz": dst_xyz + np.array([0, 0, 0.14]), "quat": gripper_pick_quat_obj2.elements, "gripper": 0}, # go down
+            {"t": 530, "xyz": dst_xyz + np.array([0, 0, 0.14]), "quat": gripper_pick_quat_obj2.elements, "gripper": 1}, # open gripper
+            {"t": 580, "xyz": init_mocap_pose_right[:3], "quat": gripper_pick_quat.elements, "gripper": 0}, # retutrn
+            {"t": 600, "xyz": init_mocap_pose_right[:3], "quat": gripper_pick_quat.elements, "gripper": 0}, # sleep
+        ]        
+
 
 
 class PickAndPutInCardboardHPolicyFranka(BasePolicy):
