@@ -39,7 +39,7 @@
     <camera name="back" pos="-0.120 1.949 0.963" xyaxes="-1.000 -0.029 0.000 0.001 -0.044 0.999"/>
     <camera name="top" pos="0.000 0.70 2.500" xyaxes="1.000 0.000 0.000 0.000 1.000 0.000"/>
     <geom type="box" pos="0 0.0822 1.272" size="0.02 0.02 0.45" conaffinity="1" contype="1" rgba="0.4 0.4 0.4 1" />
-    <body name="front_cam" pos="0 0.086 1.658" euler="-2.0543951023931953 0 0">
+    <body name="front_cam" pos="0 0.086 1.658" euler="-2.0943951023931953 0 0">
       <geom pos="0 -0.0824748 -0.0095955" quat="0 0 -0.21644 -0.976296"  type="mesh" mesh="d405_solid" group="2" material="black" contype="0" conaffinity="0"/>
       <geom class="collision" pos="0 -0.0824748 -0.0095955" quat="0 0 -0.21644 -0.976296"  type="mesh" mesh="d405_solid" />
       <camera name="front_cam" pos="0 -0.0824748 -0.0095955" mode="fixed" euler="2.775955359 0 0" fovy="40"/>
