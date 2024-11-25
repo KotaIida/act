@@ -511,7 +511,7 @@ class BimanualViperXTaskMobile(base.Task):
         obs['images'] = dict()
         obs['images']['top'] = physics.render(height=480, width=640, camera_id='top')
         obs['images']['angle'] = physics.render(height=480, width=640, camera_id='front_cam')
-        obs['images']['side'] = physics.render(height=480, width=640, camera_id='sie')
+        obs['images']['side'] = physics.render(height=480, width=640, camera_id='side')
         obs['images']['back'] = physics.render(height=480, width=640, camera_id='back')
         obs['images']['vis'] = physics.render(height=480, width=640, camera_id='side')
         obs['images']['left_wrist'] = physics.render(height=480, width=640, camera_id='wrist_cam_left')
